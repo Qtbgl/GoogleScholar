@@ -47,14 +47,14 @@ class Runner1:
         # 返回结果
         results = [{
             'abstract': pub.get('abstract'),
-            'author': pub['author'],
+            'author': ' '.join(pub['author']),
             'title': pub['title'],
             'pub_url': pub['url'],
             'num_citations': pub['num_citations'],
-            'bibtex': pub['bibtex'],
+            'BibTeX': pub['bibtex'],
             'error': pub.get('error'),
         } for pub in all_pubs]  # 所有已有的结果
-        return results
+        return {'pubs': results}
 
     async def fetch_page(self, pub):
         try:

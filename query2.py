@@ -23,14 +23,15 @@ def query2(
 
 
 async def new_call(*args, **kwargs):
-    return {'error': 'query2正在更新代码，请使用query1'}
-    # # 导入自定义库
-    # from run.Runner1 import Runner1
-    # from crawl.by_nodiver import Crawl
-    # from record.Record import Record
-    # # 创建资源
-    # async with Crawl() as crawl:
-    #     async with Record() as record:
-    #         runner = Runner1(crawl, record)
-    #         result = await runner.run(*args, **kwargs)
-    #         return result
+    # return {'error': 'query2正在更新代码，请使用query1'}
+    # 导入自定义库
+    from run.Runner2 import Runner2
+    from crawl.by_nodiver import Crawl
+    from record.Record import Record
+    from log_config import logger
+    # 创建资源
+    async with Crawl() as crawl:
+        async with Record() as record:
+            runner = Runner2(crawl, record, logger)
+            result = await runner.run(*args, **kwargs)
+            return result

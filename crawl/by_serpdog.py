@@ -1,4 +1,5 @@
 import json
+import aiohttp
 import requests
 
 
@@ -16,40 +17,38 @@ class QueryItem:
         self.as_ylo = as_ylo
         self.as_yhi = as_yhi
         self.hl = hl
-        if api_key is None:
-            self.api_key = '66ac98748bbaa4304df0c960'  # 默认密钥
-        else:
-            self.api_key = api_key
+        self.api_key = api_key
 
     def __str__(self):
         return str(self.__dict__)
 
 
-def parse_pubs(text):
-    obj = json.loads(text)
-    pubs = []
-    for res in obj["scholar_results"]:
-        pubs.append({
-            'id': res["id"],
-            'url': res['title_link'],
-            'cut': res['snippet'],
-            'title': res['title'],
-            'author': res['displayed_link'],
-            'cited': res['inline_links']['cited_by']['total'],
-            'resource': res['resources'][0]['link'] if len(res.get('resources', [])) else None
-        })
-    return pubs
+class BySerpdog:
 
+    def __init__(self, logger):
+        self.logger = logger
 
-def query_scholar(item: QueryItem):
-    """
-    :return: 一次生成最多10篇文章
-    """
-    for i in range(item.pages):
-        # 一整页获取
-        # 创建查询
+    __serpdog_key = '66ac98748bbaa4304df0c960'
+
+    def parse_pubs(self, text):
+        obj = json.loads(text)
+        pubs = []
+        for res in obj["scholar_results"]:
+            pubs.append({
+                'id': res["id"],
+                'url': res['title_link'],
+                'cut': res['snippet'],
+                'title': res['title'],
+                'author': res['displayed_link'],
+                'cited': res['inline_links']['cited_by']['total'],
+                'resource': res['resources'][0]['link'] if len(res.get('resources', [])) else None
+            })
+        return pubs
+
+    def get_payload(self, item: QueryItem, i):
+        api_key = item.api_key if item.api_key else self.__serpdog_key
         payload = {
-            'api_key': item.api_key,
+            'api_key': api_key,
             'q': item.name,
             'page': 10 * i,
         }
@@ -60,47 +59,45 @@ def query_scholar(item: QueryItem):
         if item.hl:
             payload['hl'] = item.hl
 
-        try:
-            resp = requests.get('https://api.serpdog.io/scholar', params=payload)
-            assert resp.status_code == 200
-            pubs = parse_pubs(resp.text)
-            # 加入BibTeX
-            for pub in pubs:
-                try:
-                    fill_pub(pub, item.api_key)
-                except Exception as e:
-                    print(e)
+        return payload
 
-            # generate new group of pubs
-            yield pubs
+    async def query_scholar(self, item: QueryItem):
+        """
+        :return: 一次生成最多10篇文章
+        """
+        async with aiohttp.ClientSession() as session:
+            for i in range(item.pages):
+                # 一整页获取
+                # 创建查询
+                payload = self.get_payload(item, i)
+                async with session.get('https://api.serpdog.io/scholar', params=payload) as resp:
+                    assert resp.status == 200
+                    pubs = self.parse_pubs(resp.text)
+                    # generate new group of pubs
+                    yield pubs
+        # 暂时不处理异常
 
-        except Exception as e:
-            print(e)
-            yield []
+    async def fill_bibtex(self, pub, item):
+        api_key = item.api_key if item.api_key else self.__serpdog_key
+        payload = {
+            'api_key': api_key,
+            'q': pub['id'],
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.serpdog.io/scholar_cite', params=payload) as resp:
+                assert resp.status == 200
+                obj = await resp.json()  # 不太会是中文
+                # 解析链接
+                bib_link = None
+                for link in obj['links']:
+                    if link['name'] == 'BibTeX':
+                        bib_link = link['link']
+                        break
 
-
-def fill_pub(pub, api_key):
-    payload = {
-        'api_key': api_key,
-        'q': pub['id'],
-    }
-    resp = requests.get('https://api.serpdog.io/scholar_cite', params=payload)
-    assert resp.status_code == 200
-    obj = json.loads(resp.text)
-    # 解析链接
-    bib_link = None
-    for link in obj['links']:
-        if link['name'] == 'BibTeX':
-            bib_link = link['link']
-            break
-    # 获取内容
-    try:
-        assert bib_link is not None
-        resp = requests.get(bib_link)
-        assert resp.status_code == 200
-        pub['BibTeX'] = resp.text
-    except Exception as e:
-        print(e)
-        pub['BibTeX'] = None
-
-    return pub
+                # 获取内容
+                assert bib_link is not None
+                resp = requests.get(bib_link)
+                assert resp.status_code == 200
+                pub['BibTeX'] = resp.text
+                return pub
+        # 未处理异常
