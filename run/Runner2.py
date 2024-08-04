@@ -69,10 +69,11 @@ class Runner2:
         try:
             html_str = await self.crawl.fetch_page(bib_link, wait_sec=1)
             string = html_str
-            if not re.search(r'@(\w+)\{(.*\})', string, re.DOTALL):
+            match = re.search(r'@(\w+)\{(.*\})', string, re.DOTALL)
+            if not match:
                 raise Exception('爬取到的不是BibTeX ' + bib_link)
 
-            pub['BibTeX'] = {'link': bib_link, 'string': string}
+            pub['BibTeX'] = {'link': bib_link, 'string': match.group()}
         except Exception as e:
             self.logger.error(traceback.format_exc())
             # 不抛出异常
