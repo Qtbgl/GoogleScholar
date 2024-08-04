@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 import traceback
 
@@ -58,7 +59,8 @@ class Runner1:
 
     async def fetch_page(self, pub):
         try:
-            html_str = await self.crawl.fetch_page(pub['url'], pub['title'])
+            keywords = pub['title'].split()
+            html_str = await self.crawl.fetch_page(pub['url'], keywords[:4])
             pub['page'] = html_str
         except Exception as e:
             # 浏览器爬取出错

@@ -30,8 +30,8 @@ class BySerpdog:
 
     __serpdog_key = '66ac98748bbaa4304df0c960'
 
-    def parse_pubs(self, text):
-        obj = json.loads(text)
+    def parse_pubs(self, json_obj):
+        obj = json_obj
         pubs = []
         for res in obj["scholar_results"]:
             pubs.append({
@@ -72,12 +72,12 @@ class BySerpdog:
                 payload = self.get_payload(item, i)
                 async with session.get('https://api.serpdog.io/scholar', params=payload) as resp:
                     assert resp.status == 200
-                    pubs = self.parse_pubs(resp.text)
+                    pubs = self.parse_pubs(await resp.json(encoding='utf-8'))
                     # generate new group of pubs
                     yield pubs
         # 暂时不处理异常
 
-    async def fill_bibtex(self, pub, item):
+    async def get_bibtex_link(self, pub, item):
         api_key = item.api_key if item.api_key else self.__serpdog_key
         payload = {
             'api_key': api_key,
@@ -86,18 +86,11 @@ class BySerpdog:
         async with aiohttp.ClientSession() as session:
             async with session.get('https://api.serpdog.io/scholar_cite', params=payload) as resp:
                 assert resp.status == 200
-                obj = await resp.json()  # 不太会是中文
+                obj = await resp.json(encoding='utf-8')  # 不太会是中文
                 # 解析链接
-                bib_link = None
                 for link in obj['links']:
                     if link['name'] == 'BibTeX':
-                        bib_link = link['link']
-                        break
+                        return link['link']  # 暂不获取内容
 
-                # 获取内容
-                assert bib_link is not None
-                resp = requests.get(bib_link)
-                assert resp.status_code == 200
-                pub['BibTeX'] = resp.text
-                return pub
+                raise KeyError(f'No BibTeX link in {obj}')
         # 未处理异常
