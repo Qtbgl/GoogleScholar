@@ -1,0 +1,6 @@
+**/*.pyc
+**/*.log
+.idea/
+data/
+test_code/
+my_scholarly/
