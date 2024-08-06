@@ -64,7 +64,7 @@ class ByScholarly:
                         break
         except MaxTriesExceededException as e:
             self.logger.error(traceback.format_exc())
-            raise self.QueryScholarlyError(f'scholarly访问问题:{e}')
+            raise self.QueryScholarlyError(f'scholarly无法访问谷歌 {e}')
 
         # 结束生成器
 

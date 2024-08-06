@@ -25,13 +25,24 @@ def query2(
 async def new_call(*args, **kwargs):
     # return {'error': 'query2正在更新代码，请使用query1'}
     # 导入自定义库
-    from run.Runner2 import Runner2
-    from crawl.by_nodiver import Crawl
-    from record.Record import Record
     from log_config import logger
+    logger.info('query2 new call')
+    try:
+        from crawl.by_nodiver import Crawl
+        crawl = await Crawl.create(logger)
+    except Exception as e:
+        return {'error': f'nodriver启动浏览器出错 {e}'}
+
+    try:
+        from record.Record import Record
+        record = Record(logger)
+    except Exception as e:
+        return {'error': f'record创建出错 {e}'}
+
     # 创建资源
-    async with Crawl() as crawl:
-        async with Record() as record:
+    async with crawl:
+        async with record:
+            from run.Runner2 import Runner2
             runner = Runner2(crawl, record, logger)
             result = await runner.run(*args, **kwargs)
             return result

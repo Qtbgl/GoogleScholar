@@ -34,13 +34,24 @@ def query1(
 
 
 async def new_call(*args, **kwargs):
-    from run.Runner1 import Runner1
-    from crawl.by_nodiver import Crawl
-    from record.Record import Record
     from log_config import logger
+    logger.info('query1 new call')
+    try:
+        from crawl.by_nodiver import Crawl
+        crawl = await Crawl.create(logger)
+    except Exception as e:
+        return {'error': f'nodriver启动浏览器出错 {e}'}
+
+    try:
+        from record.Record import Record
+        record = Record(logger)
+    except Exception as e:
+        return {'error': f'record创建出错 {e}'}
+
     # 创建资源
-    async with Crawl() as crawl:
-        async with Record() as record:
+    async with crawl:
+        async with record:
+            from run.Runner1 import Runner1
             runner = Runner1(crawl, record, logger)
             result = await runner.run(*args, **kwargs)
             return result

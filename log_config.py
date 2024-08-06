@@ -8,7 +8,7 @@ if not os.path.exists('data/log'):
     os.makedirs('data/log')
 
 LOG_FILE = f"data/log/app_{datetime.now().strftime('%Y-%m-%d %H%M%S')}.log"
-format_ = "{time:HH:mm:ss} {level} {message}"
+format_ = "{time:MM-DD HH:mm:ss} {level} {message}"
 
 logger.remove()  # 移除默认设置
 logger.add(sys.stdout, level="DEBUG", format=format_)
