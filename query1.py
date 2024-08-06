@@ -4,28 +4,23 @@ from context import app
 
 from fastapi import Path, Query
 
+from secure import check_key
+
 
 @app.get("/query1/{name}")
 def query1(
     name: str = Path(..., title="terms to be searched"),
     pages: int = Query(default=3, title="number of pages of publications"),
-    min_cite: Union[int, None] = Query(default=None, title="filter by citations, None means not required"),
     year_low: int = Query(default=None, title="minimum year of publication", ge=1900, le=2024),
     year_high: int = Query(default=None, title="maximum year of publication", ge=1900, le=2024),
-    patents: bool = Query(default=True, title="Whether or not to include patents"),
-    citations: bool = Query(default=True, title="Whether or not to include citations"),
-    sort_by: str = Query(default="relevance", title="Sort by 'relevance' or 'date'", pattern="^(relevance|date)$")
+    api_key: str = Query(title='user key'),
 ):
+    if not check_key(api_key):
+        return {"error": "Invalid API key!"}
+
     # 创建查询
     from crawl.by_scholarly import QueryItem
-    param = dict(
-        year_low=year_low,
-        year_high=year_high,
-        patents=patents,
-        citations=citations,
-        sort_by=sort_by,
-    )
-    item = QueryItem(name, pages, min_cite, param)
+    item = QueryItem(name, pages, year_low=year_low, year_high=year_high)
 
     # # 使用nodriver爬取网页时，创建新的事件循环
     import nodriver as uc

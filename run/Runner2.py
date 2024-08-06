@@ -46,11 +46,11 @@ class Runner2:
             'pub_url': pub['url'],
             'title': pub['title'],
             'author': pub['author'],
-            'cited': pub['cited'],
+            'num_citations': pub['cited'],
             'BibTeX': pub.get('BibTeX'),
             'error': pub.get('error'),
         } for pub in all_pubs]
-        return {'pubs': results}
+        return {'pubs': results, 'error': None}
 
     async def fill_pub(self, pub, item):
         # 爬取bibtex
