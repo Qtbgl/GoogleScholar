@@ -76,6 +76,7 @@ async def query1(
             loop.close()  # 关事件循环
             logger.info('已关闭任务线程的事件循环')
 
+    closed = False
     try:
         # 在后台线程中运行长任务
         thread = threading.Thread(target=new_call)
@@ -89,8 +90,10 @@ async def query1(
         thread.join()
         # 返回总结果
         await goodbye(msg_obj=result)
+        closed = True
 
     except Exception as e:  # 默认是连接问题
         logger.error(f"Connection closed: \n{traceback.format_exc()}")
     finally:
-        await websocket.close()  # 关闭连接
+        if not closed:
+            await websocket.close()  # 关闭连接

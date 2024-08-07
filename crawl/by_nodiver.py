@@ -52,7 +52,7 @@ class Crawl:
             content = await page.get_content()
             return content
         except asyncio.exceptions.TimeoutError as e:
-            raise Exception(f'nodriver等待页面加载失败 {url} wait_for:{keywords}') from e
+            raise Exception(f'nodriver等待页面加载失败 {url} wait_for:{keywords} error:{e}')
         finally:
             await page.close()  # debug 关闭页面，释放内存
 

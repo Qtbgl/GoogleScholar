@@ -1,40 +1,40 @@
-from Conn import Conn
+from record.Conn import Conn
 
 
 class Record2(Conn):
-    def search_history(self, url):
-        """
-        :param url: 寻找与url最相近的网址
-        :return: base_url，若未找到返回None
-        """
+    def __init__(self, logger):
+        super().__init__(logger)
+        self.pages = None
+        self.fail_pubs = []
+        self.filled_pubs = []
 
-    def get_xpaths(self, base_url):
-        """
-        :param base_url: 查询此类网页的xpath
-        :return:
-        """
+    def set_pages(self, pages):
+        self.pages = pages
 
-    def disable_xpaths(self, base_url):
-        """
-        :param base_url: 此类网页的xpath不可用了
-        :return:
-        """
+    def fail_to_fill(self, pub):
+        self.fail_pubs.append(pub)
 
-    def fail_to_handle(self, url):
-        """
-        :param url: 记录该网页无法处理
-        :return:
-        """
+    def success_fill(self, pub):
+        self.filled_pubs.append(pub)
 
-    def new_handled(self, url, xpaths):
-        """
-        :param base_url: 记录成功处理的网页的xpath
-        :param xpaths:
-        :return:
-        """
+    def get_progress(self):
+        if not self.pages:
+            return 0.0
 
-    def save_pub(self, pub):
-        """
-        :param pub: 保存此结果
-        :return:
-        """
+        total = 10 * self.pages
+        done = len(self.filled_pubs) + len(self.fail_pubs)
+        return done / total
+
+    def deliver_pubs(self):
+        all_pubs = self.filled_pubs + self.fail_pubs
+        # 所有已有的结果
+        return [{
+            'abstract': pub.get('abstract'),
+            'pub_url': pub['url'],
+            'title': pub['title'],
+            'author': pub['author'],
+            'num_citations': pub['num_citations'],
+            'eprint_url': pub.get('eprint_url'),
+            'BibTeX': pub.get('BibTeX'),
+            'error': pub.get('error'),
+        } for pub in all_pubs]

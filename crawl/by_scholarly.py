@@ -27,13 +27,14 @@ class ByScholarly:
     def parse_pub(self, json_obj):
         pub = json_obj
         author = ', '.join(pub['bib']['author'])
+        string = scholarly.bibtex(pub)
         return {
             'cut': pub['bib']['abstract'],
             'url': pub['pub_url'],
             'author': author,
             'title': pub['bib']['title'],
             'num_citations': pub['num_citations'],
-            'BibTeX': scholarly.bibtex(pub),
+            'BibTeX': {'string': string, 'link': None},
             'eprint_url': pub.get('eprint_url'),
         }
 

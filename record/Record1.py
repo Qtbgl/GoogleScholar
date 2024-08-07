@@ -41,6 +41,7 @@ class Record1(Conn):
             'title': pub['title'],
             'author': pub['author'],
             'num_citations': pub['num_citations'],
+            'eprint_url': pub.get('eprint_url'),
             'BibTeX': pub['BibTeX'],
             'error': pub.get('error'),
         } for pub in all_pubs]

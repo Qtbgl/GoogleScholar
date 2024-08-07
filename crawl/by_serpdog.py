@@ -17,7 +17,7 @@ class QueryItem:
         self.pages = pages
         self.as_ylo = as_ylo
         self.as_yhi = as_yhi
-        self.api_key = api_key
+        self.api_key = api_key  # serpdog的api_key
 
     def __str__(self):
         return str(self.__dict__)
@@ -48,6 +48,7 @@ class BySerpdog:
         pubs = []
         for res in obj["scholar_results"]:
             cited = res['inline_links']['cited_by']['total']
+            resources = res.get('resources', [])
             pubs.append({
                 'id': res["id"],
                 'url': res['title_link'],
@@ -55,7 +56,7 @@ class BySerpdog:
                 'title': res['title'],
                 'author': res['displayed_link'],
                 'num_citations': re.search(r'\d+', cited).group(),
-                'eprint_url': res['resources'][0]['link'] if len(res.get('resources', [])) else None
+                'eprint_url': resources[0]['link'] if len(resources) else None
             })
         return pubs
 
