@@ -16,7 +16,12 @@ class Runner1:
         self.record = record
         self.logger = logger
 
-    async def run(self, item: QueryItem):
+    async def run(self, item):
+        async with self.crawl:
+            async with self.record:
+                await self.finish(item)
+
+    async def finish(self, item: QueryItem):
         # 创建查询
         self.logger.info(f'任务查询 {item}')
         all_pubs = []

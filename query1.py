@@ -1,52 +1,93 @@
+import asyncio
+import json
+import threading
+import traceback
 from typing import Union
 
 from context import app
 
-from fastapi import Path, Query
+from fastapi import Path, Query, WebSocket
 
-from secure import check_key
+from secure import check_key, get_general_params
 
 
-@app.get("/query1/{name}")
-def query1(
+@app.websocket("/query1/{name}")
+async def query1(
+    websocket: WebSocket,
     name: str = Path(..., title="terms to be searched"),
-    pages: int = Query(default=3, title="number of pages of publications"),
-    year_low: int = Query(default=None, title="minimum year of publication", ge=1900, le=2024),
-    year_high: int = Query(default=None, title="maximum year of publication", ge=1900, le=2024),
-    api_key: str = Query(title='user key'),
 ):
-    if not check_key(api_key):
-        return {"error": "Invalid API key!"}
+    await websocket.accept()
 
-    # 创建查询
-    from crawl.by_scholarly import QueryItem
-    item = QueryItem(name, pages, year_low=year_low, year_high=year_high)
+    async def goodbye(msg_obj: dict):
+        await websocket.send_text(json.dumps(msg_obj, encoding="utf-8"))
+        await websocket.close()  # 关闭连接
 
-    # # 使用nodriver爬取网页时，创建新的事件循环
-    import nodriver as uc
-    result = uc.loop().run_until_complete(new_call(item))
-    return result
+    # 解析api参数
+    try:
+        data = await websocket.receive_text()
+        obj = json.loads(data)
+        check_key(obj)
 
+        from crawl.by_scholarly import QueryItem
+        params = get_general_params(obj)  # 通用参数
+        item = QueryItem(name, **params)
 
-async def new_call(*args, **kwargs):
+    except Exception as e:
+        await goodbye({"error": f"api参数异常 {e}"})
+        return
+
+    # 创建资源
     from log_config import logger
     logger.info('query1 new call')
     try:
         from crawl.by_nodiver import Crawl
         crawl = await Crawl.create(logger)
     except Exception as e:
-        return {'error': f'nodriver启动浏览器出错 {e}'}
+        await goodbye({'error': f'nodriver启动浏览器出错 {e}'})
+        return
 
     try:
         from record.Record import Record
         record = Record(logger)
     except Exception as e:
-        return {'error': f'record创建出错 {e}'}
+        await goodbye({'error': f'record创建出错 {e}'})
+        return
 
-    # 创建资源
-    async with crawl:
-        async with record:
+    # 线程执行结果
+    result = {'type': 'Result'}
+
+    def new_call():
+        # 使用nodriver爬取网页时，创建新的事件循环
+        loop = asyncio.new_event_loop()  # 为该线程创建新的事件循环
+        asyncio.set_event_loop(loop)
+        try:
             from run.Runner1 import Runner1
             runner = Runner1(crawl, record, logger)
-            result = await runner.run(*args, **kwargs)
-            return result
+            # 创建任务
+            task = runner.run(item)
+            result['data'] = loop.run_until_complete(task)  # 运行异步任务，结果返回发送
+            result['error'] = None
+        except Exception as e:
+            logger.error(f'new_call返回异常 {e}')
+            result['error'] = e   # 异常信息返回，不抛出
+        finally:
+            loop.close()  # 关事件循环
+
+    try:
+        # 在后台线程中运行长任务
+        thread = threading.Thread(target=new_call)
+        thread.start()
+        while thread.is_alive():
+            # 获取进度
+            obj = {'type': 'Heartbeat', 'progress': record.get_progress()}
+            await websocket.send_text(json.dumps(obj))  # 发送心跳消息
+            await asyncio.sleep(5)
+
+        thread.join()
+        # 返回总结果
+        await goodbye(msg_obj=result)
+
+    except Exception as e:  # 默认是连接问题
+        logger.error(f"Connection closed: \n{traceback.format_exc()}")
+    finally:
+        await websocket.close()  # 关闭连接
