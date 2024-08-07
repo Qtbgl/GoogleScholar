@@ -47,8 +47,8 @@ async def query1(
         return
 
     try:
-        from record.Record import Record
-        record = Record(logger)
+        from record.Record1 import Record1
+        record = Record1(logger)
     except Exception as e:
         await goodbye({'error': f'record创建出错 {e}'})
         return
@@ -65,12 +65,13 @@ async def query1(
             runner = Runner1(crawl, record, logger)
             # 创建任务
             task = runner.run(item)
-            result['data'] = loop.run_until_complete(task)  # 运行异步任务，结果返回发送
+            loop.run_until_complete(task)  # 运行异步任务
             result['error'] = None
         except Exception as e:
             logger.error(f'new_call返回异常 {e}')
-            result['error'] = e   # 异常信息返回，不抛出
+            result['error'] = str(e)   # 异常信息返回，不抛出
         finally:
+            result['data'] = record.deliver_pubs()
             loop.close()  # 关事件循环
 
     try:

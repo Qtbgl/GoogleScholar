@@ -4,13 +4,13 @@ import time
 import traceback
 
 from parse.gpt_page_text import GPTPageParse
-from record.Record import Record
+from record.Record2 import Record2
 from crawl.by_serpdog import BySerpdog, QueryItem
 from crawl.by_nodiver import Crawl
 
 
 class Runner2:
-    def __init__(self, crawl: Crawl, record: Record, logger):
+    def __init__(self, crawl: Crawl, record: Record2, logger):
         # 依赖对象
         self.crawl = crawl
         self.record = record

@@ -38,8 +38,8 @@ async def new_call(*args, **kwargs):
         return {'error': f'nodriver启动浏览器出错 {e}'}
 
     try:
-        from record.Record import Record
-        record = Record(logger)
+        from record.Record2 import Record2
+        record = Record2(logger)
     except Exception as e:
         return {'error': f'record创建出错 {e}'}
 

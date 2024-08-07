@@ -4,13 +4,13 @@ import time
 import traceback
 
 from parse.gpt_page_text import GPTPageParse
-from record.Record import Record
+from record.Record1 import Record1
 from crawl.by_scholarly import ByScholarly, QueryItem
 from crawl.by_nodiver import Crawl
 
 
 class Runner1:
-    def __init__(self, crawl: Crawl, record: Record, logger):
+    def __init__(self, crawl: Crawl, record: Record1, logger):
         # 依赖对象
         self.crawl = crawl
         self.record = record
@@ -24,7 +24,7 @@ class Runner1:
     async def finish(self, item: QueryItem):
         # 创建查询
         self.logger.info(f'任务查询 {item}')
-        all_pubs = []
+        self.record.set_pages(item.pages)
         source = ByScholarly(self.logger)
         try:
             # for every 10 pubs
@@ -32,50 +32,40 @@ class Runner1:
                 # 爬取网页
                 self.logger.info(f'准备异步爬取pubs {len(pubs)}')
                 tasks = [self.fetch_page(pub) for pub in pubs]
-                pubs = await asyncio.gather(*tasks)  # 异步浏览器爬取
-                all_pubs.extend(pubs)
+                await asyncio.gather(*tasks)  # 异步浏览器爬取
         except KeyboardInterrupt:
             raise
         except ByScholarly.QueryScholarlyError as e:
-            if len(all_pubs) == 0:  # 完全没获取到数据时
-                return {'error': str(e)}
-
+            if len(self.record.cand_pubs):
+                pass
+            else:
+                raise e
         except Exception as e:
             self.logger.error('未预料的异常' + '\n' + traceback.format_exc())
-            return {'error': '发生异常，中断爬取', 'pubs': all_pubs}
+            raise Exception(f'发生异常，中断爬取 {e}')
 
         # 处理内容
-        pubs_to_fill = [pub for pub in all_pubs if pub.get('error') is None]  # 处理一部分
-        self.logger.info(f'准备异步请求GPT处理pages {len(pubs_to_fill)}')
-        tasks = [self.handle_page(pub) for pub in pubs_to_fill]
+        self.logger.info(f'准备异步请求GPT处理pages {len(self.record.cand_pubs)}')
+        tasks = [self.handle_page(pub) for pub in self.record.cand_pubs]
         await asyncio.gather(*tasks)  # 假设异常已在协程中处理
 
-        # 返回结果
-        results = [{
-            'abstract': pub.get('abstract'),
-            'pub_url': pub['url'],
-            'title': pub['title'],
-            'author': pub['author'],
-            'num_citations': pub['num_citations'],
-            'BibTeX': pub['BibTeX'],
-            'error': pub.get('error'),
-        } for pub in all_pubs]  # 所有已有的结果
-        return {'pubs': results, 'error': None}
+        # 不返回结果
 
     async def fetch_page(self, pub):
         try:
             keywords = pub['title'].split()
             html_str = await self.crawl.fetch_page(pub['url'], keywords[:4])
             pub['page'] = html_str
+            self.record.success_to_fetch_page(pub)
         except Exception as e:
             # 浏览器爬取出错
             self.logger.error(traceback.format_exc())
             pub['error'] = {'when': 'nodriver爬取网页'}  # 标记这个pub
-        finally:
-            return pub
+            self.record.fail_to_fetch_page(pub)
 
     async def handle_page(self, pub):
         parse = GPTPageParse(self.logger)
+        flag = False
         try:
             url = pub['url']
             html_str = pub['page']
@@ -87,6 +77,9 @@ class Runner1:
             pub['abstract'] = abstract
 
             self.logger.info(f'GPT out > {url}')
+
+            self.record.success_to_handle_page(pub)
+            flag = True
         except GPTPageParse.GPTQueryError as e:
             pub['error'] = {'when': '处理内容', 'detail': str(e)}
         except GPTPageParse.GPTAnswerError as e:
@@ -94,6 +87,6 @@ class Runner1:
         except Exception as e:
             self.logger.error('未预料的异常' + '\n' + traceback.format_exc())
             pub['error'] = {'when': '处理内容'}
-
         finally:
-            return pub
+            if not flag:
+                self.record.fail_to_handle_page(pub)
