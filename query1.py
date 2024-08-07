@@ -19,7 +19,7 @@ async def query1(
     await websocket.accept()
 
     async def goodbye(msg_obj: dict):
-        await websocket.send_text(json.dumps(msg_obj, encoding="utf-8"))
+        await websocket.send_text(json.dumps(msg_obj))
         await websocket.close()  # 关闭连接
 
     # 解析api参数
@@ -58,6 +58,7 @@ async def query1(
 
     def new_call():
         # 使用nodriver爬取网页时，创建新的事件循环
+        logger.info('进入任务线程')
         loop = asyncio.new_event_loop()  # 为该线程创建新的事件循环
         asyncio.set_event_loop(loop)
         try:
@@ -73,6 +74,7 @@ async def query1(
         finally:
             result['data'] = record.deliver_pubs()
             loop.close()  # 关事件循环
+            logger.info('已关闭任务线程的事件循环')
 
     try:
         # 在后台线程中运行长任务

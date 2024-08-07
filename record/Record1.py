@@ -4,6 +4,7 @@ from record.Conn import Conn
 class Record1(Conn):
     def __init__(self, logger):
         super().__init__(logger)
+        self.pages = None
         self.cand_pubs = []
         self.fail_pubs = []
         self.filled_pubs = []
