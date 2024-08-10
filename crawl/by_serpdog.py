@@ -1,5 +1,6 @@
 import json
 import re
+from urllib.parse import quote
 
 import aiohttp
 import requests
@@ -94,6 +95,16 @@ class BySerpdog:
 
                 raise KeyError(f'No BibTeX link in {obj}')
         # 未处理异常
+
+    async def get_bibtex_string(self, bibtex_link, item):
+        api_key = item.api_key if item.api_key else serpdog_key
+        bibtex_link = quote(bibtex_link)
+        payload = {'api_key': api_key, 'url': bibtex_link, 'render_js': 'false'}
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.serpdog.io/scrape', params=payload) as resp:
+                assert resp.status == 200, 'serpdog\'s api请求失败'
+                string = await resp.text(encoding='utf-8')
+                return string
 
 
 serpdog_key = '66ac99f277291d1b91ed603f'

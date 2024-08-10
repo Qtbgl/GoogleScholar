@@ -71,9 +71,12 @@ class Runner2:
             string = html_str
             match = re.search(r'@(\w+)\{(.*\})', string, re.DOTALL)
             if not match:
-                raise Exception('爬取到的不是BibTeX ' + bib_link)
-
-            pub['BibTeX'] = {'link': bib_link, 'string': match.group()}
+                self.logger.error('尝试用serpdog爬取BibTeX ' + bib_link)
+                # 尝试用serpdog api抓取
+                string = await self.source.get_bibtex_string(bib_link, item)
+                pub['BibTeX'] = {'link': bib_link, 'string': string}
+            else:
+                pub['BibTeX'] = {'link': bib_link, 'string': match.group()}
         except Exception as e:
             self.logger.error(traceback.format_exc())
             # 不抛出异常
