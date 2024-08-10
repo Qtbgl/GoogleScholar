@@ -56,7 +56,8 @@ class BySerpdog:
                 'title': res['title'],
                 'author': res['displayed_link'],
                 'num_citations': re.search(r'\d+', cited).group(),
-                'eprint_url': resources[0]['link'] if len(resources) else None
+                'eprint_url': resources[0]['link'] if len(resources) else None,
+                'versions_url': res['inline_links']['versions']['link'],
             })
         return pubs
 
@@ -70,7 +71,7 @@ class BySerpdog:
                 # 创建查询
                 payload = get_payload(item, i)
                 async with session.get('https://api.serpdog.io/scholar', params=payload) as resp:
-                    assert resp.status == 200
+                    assert resp.status == 200, 'serpdog\'s api请求失败'
                     pubs = self.parse_pubs(await resp.json(encoding='utf-8'))
                     # generate new group of pubs
                     yield pubs
@@ -84,7 +85,7 @@ class BySerpdog:
         }
         async with aiohttp.ClientSession() as session:
             async with session.get('https://api.serpdog.io/scholar_cite', params=payload) as resp:
-                assert resp.status == 200
+                assert resp.status == 200, 'serpdog\'s api请求失败'
                 obj = await resp.json(encoding='utf-8')  # 不太会是中文
                 # 解析链接
                 for link in obj['links']:
@@ -95,4 +96,4 @@ class BySerpdog:
         # 未处理异常
 
 
-serpdog_key = '66ac98748bbaa4304df0c960'
+serpdog_key = '66ac99f277291d1b91ed603f'

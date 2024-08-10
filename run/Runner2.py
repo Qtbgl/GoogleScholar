@@ -2,6 +2,9 @@ import asyncio
 import re
 import time
 import traceback
+import urllib.parse
+
+from bs4 import BeautifulSoup
 
 from parse.gpt_page_text import GPTPageParse
 from record.Record2 import Record2
@@ -71,12 +74,79 @@ class Runner2:
             # 不抛出异常
             pub['BibTeX'] = {'link': bib_link, 'string': None}
 
+    async def get_extra_links(self, pub: dict):
+        title = pub['title']
+        payload = {'q': title, }
+        url = 'https://www.researchgate.net/search/publication'
+        url = f"{url}?{urllib.parse.urlencode(payload)}"
+        text = await self.crawl.fetch_page(url, wait_sec=1)
+
+        # scraping
+        soup = BeautifulSoup(text, 'html.parser')
+        container = soup.find("div", class_="search-indent-container")
+        # 文本相似匹配
+        links = []
+        for a in container.find_all("a", string=lambda s: s and title.lower() in s.lower()):
+            # 提取链接 URL
+            url = 'https://www.researchgate.net/' + a["href"]
+            links.append(url)
+
+        return links
+
+    async def fill_page_try2nd(self, pub):
+        # 尝试其他方式获取网页
+        try:
+            links = await self.get_extra_links(pub)
+            assert len(links) > 0
+        except Exception as e:
+            raise Exception('获取pub其他版本的网页失败')
+
+        flag = False
+        for link in links:
+            try:
+                self.logger.debug(f'{pub["title"]} 尝试其他版本 {link}')
+                page_url = link
+                if 'pdf' in page_url.lower():
+                    raise self.PageIsPdfError()
+
+                kw1 = pub['title'].split()
+                kw2 = [s for s in pub['cut'].split() if re.match(r'^[a-zA-Z]+$', s)]
+                keywords = kw1[:4] + kw2[:12]
+                # 用标题和摘要勉强匹配
+                html_str = await self.crawl.fetch_page(page_url, keywords)
+                pub['page'] = html_str
+                flag = True
+                break
+            except self.PageIsPdfError as e:
+                continue
+            except Crawl.WaitPageError as e:
+                continue
+            except Exception as e:
+                raise
+
+        if not flag:
+            raise Exception('获取pub其他版本的网页失败')
+
+    class PageIsPdfError(Exception):
+        pass
+
     async def fill_abstract(self, pub: dict):
+        """
+        :param pub:
+        :return: 任何一个环节失败，则抛出异常
+        """
         # 先爬取pub的网页
         try:
+            page_url = pub['url']
+            if 'pdf' in page_url.lower():
+                raise self.PageIsPdfError()
             keywords = pub['title'].split()
-            html_str = await self.crawl.fetch_page(pub['url'], keywords[:4])
+            html_str = await self.crawl.fetch_page(page_url, keywords[:4])
             pub['page'] = html_str
+        except Crawl.WaitPageError as e:
+            await self.fill_page_try2nd(pub)
+        except self.PageIsPdfError as e:
+            await self.fill_page_try2nd(pub)
         except Exception as e:
             raise
 

@@ -27,6 +27,7 @@ class Record2(Conn):
 
     def deliver_pubs(self):
         all_pubs = self.filled_pubs + self.fail_pubs
+        bib_default = {'link': None, 'string': None}
         # 所有已有的结果
         return [{
             'abstract': pub.get('abstract'),
@@ -35,6 +36,6 @@ class Record2(Conn):
             'author': pub['author'],
             'num_citations': pub['num_citations'],
             'eprint_url': pub.get('eprint_url'),
-            'BibTeX': pub.get('BibTeX'),
+            'BibTeX': pub.get('BibTeX', bib_default),
             'error': pub.get('error'),
         } for pub in all_pubs]
