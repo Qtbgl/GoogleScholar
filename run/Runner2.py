@@ -53,8 +53,13 @@ class Runner2:
             await asyncio.gather(task1, task2)
             # 成功爬取
             self.record.success_fill(pub)
+        except self.QuitFillPubError as e:
+            # 取消fill这一篇pub
+            self.logger.error(str(e))
+            pub['error'] = 'Error in fill_pub: ' + str(e)
+            self.record.fail_to_fill(pub)
         except Exception as e:
-            # 任何异常取消fill这一篇pub
+            # 所有异常不抛出
             self.logger.error(traceback.format_exc())
             pub['error'] = 'Error in fill_pub: ' + str(e)
             self.record.fail_to_fill(pub)
@@ -100,12 +105,12 @@ class Runner2:
             links = await self.get_extra_links(pub)
             assert len(links) > 0
         except Exception as e:
-            raise Exception('获取pub其他版本的网页失败')
+            raise self.QuitFillPubError(f'{pub["url"]} 获取其他版本的网页链接失败')
 
         flag = False
         for link in links:
             try:
-                self.logger.debug(f'{pub["title"]} 尝试其他版本 {link}')
+                self.logger.info(f'{pub["url"]} 尝试其他版本 {link}')
                 page_url = link
                 if 'pdf' in page_url.lower():
                     raise self.PageIsPdfError()
@@ -117,18 +122,22 @@ class Runner2:
                 html_str = await self.crawl.fetch_page(page_url, keywords)
                 pub['page'] = html_str
                 flag = True
+                self.logger.info(f'{pub["url"]} 成功获取到其他版本')
                 break
             except self.PageIsPdfError as e:
                 continue
             except Crawl.WaitPageError as e:
+                self.logger.error(str(e))  # 打印原因
                 continue
-            except Exception as e:
-                raise
+            # 未知异常抛出
 
         if not flag:
-            raise Exception('获取pub其他版本的网页失败')
+            raise self.QuitFillPubError(f'{pub["url"]} 获取其他版本失败')
 
     class PageIsPdfError(Exception):
+        pass
+
+    class QuitFillPubError(Exception):
         pass
 
     async def fill_abstract(self, pub: dict):
@@ -141,15 +150,15 @@ class Runner2:
             page_url = pub['url']
             if 'pdf' in page_url.lower():
                 raise self.PageIsPdfError()
+
             keywords = pub['title'].split()
             html_str = await self.crawl.fetch_page(page_url, keywords[:4])
             pub['page'] = html_str
-        except Crawl.WaitPageError as e:
-            await self.fill_page_try2nd(pub)
-        except self.PageIsPdfError as e:
-            await self.fill_page_try2nd(pub)
-        except Exception as e:
-            raise
+        except (Crawl.WaitPageError, self.PageIsPdfError) as e:
+            try:
+                await self.fill_page_try2nd(pub)
+            except self.QuitFillPubError as e:
+                raise
 
         # 再访问GPT，提取摘要
         try:
@@ -164,9 +173,5 @@ class Runner2:
 
             self.logger.info(f'GPT out > {url}')
 
-        except GPTPageParse.GPTQueryError as e:
-            raise
-        except GPTPageParse.GPTAnswerError as e:
-            raise
-        except Exception as e:
-            raise
+        except (GPTPageParse.GPTQueryError, GPTPageParse.GPTAnswerError) as e:
+            raise self.QuitFillPubError(e)
