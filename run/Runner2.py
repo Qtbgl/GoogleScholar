@@ -77,9 +77,10 @@ class Runner2:
     async def get_extra_links(self, pub: dict):
         title = pub['title']
         payload = {'q': title, }
-        url = 'https://www.researchgate.net/search/publication'
+        url = 'https://www.researchgate.net/search/publication'  # 需要网络支持
         url = f"{url}?{urllib.parse.urlencode(payload)}"
-        text = await self.crawl.fetch_page(url, wait_sec=1)
+        kws = ("Discover the world's scientific knowledge",)
+        text = await self.crawl.fetch_page(url, wait_sec=5, keywords=kws)
 
         # scraping
         soup = BeautifulSoup(text, 'html.parser')
@@ -111,8 +112,8 @@ class Runner2:
 
                 kw1 = pub['title'].split()
                 kw2 = [s for s in pub['cut'].split() if re.match(r'^[a-zA-Z]+$', s)]
-                keywords = kw1[:4] + kw2[:12]
-                # 用标题和摘要勉强匹配
+                keywords = kw1[:4] + kw2[:12]  # 用标题和摘要勉强匹配
+
                 html_str = await self.crawl.fetch_page(page_url, keywords)
                 pub['page'] = html_str
                 flag = True
