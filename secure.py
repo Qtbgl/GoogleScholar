@@ -31,12 +31,11 @@ def get_general_params(obj: dict):
 
 class Params:
     def __init__(self, obj: dict):
-        print('obj', obj)
         self.obj = obj
 
     @property
     def pages(self):
-        return self.obj.get('pages', 1)
+        return get_int(self.obj, 'pages', a=1, default=1)
 
     @property
     def year_low(self):
@@ -57,7 +56,6 @@ def get_int(obj, key, default=None, a=None, b=None):
         return default
 
     val = int(val)
-    print('???', a, val, b)
     if a is not None:
         assert a <= val, 'Value must be bigger than or equal to {}'.format(a)
     if b is not None:

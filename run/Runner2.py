@@ -47,7 +47,13 @@ class Runner2:
         # 不返回结果
 
     async def fill_pub(self, pub, item):
-        # 爬取bibtex
+        min_cite = item.min_cite
+        # 过滤引用数量
+        if min_cite is not None and pub['num_citations'] < min_cite:
+            pub['error'] = f'引用数量不足 {pub["num_citations"]} < {min_cite}'
+            self.record.fail_to_fill(pub)
+            return
+
         try:
             await self.fill_abstract(pub)
             # 摘要获取后，再bibtex
