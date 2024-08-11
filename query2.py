@@ -5,7 +5,6 @@ import traceback
 from fastapi import Path, Query, WebSocket
 
 from context import app
-from secure import check_key, get_general_params
 
 
 async def goodbye(websocket: WebSocket, msg_obj: dict):
@@ -23,19 +22,21 @@ async def query2(
     try:
         data = await websocket.receive_text()
         obj = json.loads(data)
-        check_key(obj)
-        # 创建item
-        from crawl.by_serpdog import QueryItem
-        params = get_general_params(obj)  # 通用参数
-        # remap参数
-        payload = dict(
-            pages=params['pages'],
-            api_key=obj.get('serpdog_key'),  # 特殊
-            as_yhi=params.get('year_high'),
-            as_ylo=params.get('year_low'),
-        )
-        item = QueryItem(name, **payload)
 
+        from secure import Params, check_key
+        check_key(obj)
+        assert obj.get('serpdog_key') is not None, '缺少serpdog_key'
+
+        # 创建item
+        from crawl.by_serpdog import QueryItem, Payload, get_payload
+        p = Params(obj)
+        item = QueryItem(
+            name=name, pages=p.pages, min_cite=p.min_cite,
+            payload=Payload(
+                api_key=obj['serpdog_key'],
+                as_yhi=p.year_high,
+                as_ylo=p.year_low
+            ))
     except Exception as e:
         await goodbye(websocket, {"error": f"api参数异常 {e}"})
         return

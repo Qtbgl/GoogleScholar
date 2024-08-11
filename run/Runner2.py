@@ -49,9 +49,9 @@ class Runner2:
     async def fill_pub(self, pub, item):
         # 爬取bibtex
         try:
-            task1 = self.fill_bibtex(pub, item)
-            task2 = self.fill_abstract(pub)
-            await asyncio.gather(task1, task2)
+            await self.fill_abstract(pub)
+            # 摘要获取后，再bibtex
+            await self.fill_bibtex(pub, item)
             # 成功爬取
             self.record.success_fill(pub)
         except self.QuitFillPubError as e:
@@ -78,10 +78,11 @@ class Runner2:
                 pub['BibTeX'] = {'link': bib_link, 'string': string}
             else:
                 pub['BibTeX'] = {'link': bib_link, 'string': match.group()}
+
         except Exception as e:
             self.logger.error(traceback.format_exc())
-            # 不抛出异常
             pub['BibTeX'] = {'link': bib_link, 'string': None}
+            raise self.QuitFillPubError(f'BibTeX未正常获取 {str(e)}')
 
     class QuitFillPubError(Exception):
         pass

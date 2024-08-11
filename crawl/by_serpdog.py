@@ -6,35 +6,37 @@ import aiohttp
 import requests
 
 
-class QueryItem:
-    name: str
-    pages: int
-    as_ylo: int
-    as_yhi: int
-    api_key: str
-
-    def __init__(self, name, pages, as_ylo=None, as_yhi=None, api_key=None):
-        self.name = name
-        self.pages = pages
+class Payload:
+    def __init__(self, api_key, as_ylo=None, as_yhi=None):
         self.as_ylo = as_ylo
         self.as_yhi = as_yhi
         self.api_key = api_key  # serpdog的api_key
+
+
+class QueryItem:
+    name: str
+    pages: int
+    min_cite: int
+    payload: Payload
+
+    def __init__(self, name, pages, payload: Payload, min_cite=None):
+        self.pages = pages
+        self.name = name
+        self.min_cite = min_cite
+        self.payload = payload
 
     def __str__(self):
         return str(self.__dict__)
 
 
 def get_payload(item: QueryItem, i):
-    api_key = item.api_key if item.api_key else serpdog_key  # use default key
     payload = {
-        'api_key': api_key,
         'q': item.name,
         'page': 10 * i,
     }
-    if item.as_ylo:
-        payload['as_ylo'] = item.as_ylo
-    if item.as_yhi:
-        payload['as_yhi'] = item.as_yhi
+    for k, v in item.payload.__dict__.items():
+        if v is not None:
+            payload[k] = v
 
     return payload
 
@@ -79,7 +81,7 @@ class BySerpdog:
         # 暂时不处理异常
 
     async def get_bibtex_link(self, pub, item):
-        api_key = item.api_key if item.api_key else serpdog_key
+        api_key = item.api_key
         payload = {
             'api_key': api_key,
             'q': pub['id'],
@@ -97,7 +99,7 @@ class BySerpdog:
         # 未处理异常
 
     async def get_bibtex_string(self, bibtex_link, item):
-        api_key = item.api_key if item.api_key else serpdog_key
+        api_key = item.api_key
         bibtex_link = quote(bibtex_link)
         payload = {'api_key': api_key, 'url': bibtex_link, 'render_js': 'false'}
         async with aiohttp.ClientSession() as session:
@@ -105,6 +107,3 @@ class BySerpdog:
                 assert resp.status == 200, 'serpdog\'s api请求失败'
                 string = await resp.text(encoding='utf-8')
                 return string
-
-
-serpdog_key = '66ac99f277291d1b91ed603f'
