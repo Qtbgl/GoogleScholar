@@ -39,15 +39,21 @@ class Crawl:
         self.logger.info('成功打开浏览器')
         return self
 
-    async def fetch_page(self, url, keywords=(), wait_sec=5):
+    async def fetch_page(self, url, keywords=(), selectors=(), wait_sec=5):
         # 打开网页
         page = await self.browser.get(url, new_tab=True)  # debug 需要在new_tab，否则会竞争页面
         try:
             # 等待页面加载
             await page.wait(wait_sec)
+
+            # if await self.has_captcha(page):
+            #     raise self.CaptchaPageError(f'nodriver打开网页含验证码 url:{url} wait_for:{keywords}')
+
             # 检查元素加载
             for word in keywords:  # 需要所有都存在
                 await page.wait_for(text=word, timeout=10)
+            for css in selectors:
+                await page.wait_for(selector=css, timeout=10)
 
             content = await page.get_content()
             return content
@@ -59,6 +65,35 @@ class Crawl:
 
     class WaitPageError(Exception):
         pass
+
+    class CaptchaPageError(Exception):
+        pass
+
+    class PageIsPdfError(Exception):
+        def __init__(self, arg=None):
+            super().__init__('网页是pdf' or arg)
+
+    async def is_page_pdf(self, page_url):
+        if 'pdf' in page_url.lower():
+            return True
+        else:
+            return False
+
+    async def has_captcha(self, page) -> bool:
+        try:
+            text = await page.get_content()
+            # 似乎无效果
+            if 'captcha' in text or 'Captcha' in text or 'CAPTCHA' in text:
+                return True
+            if 'verify you are human' in text:
+                return True
+            if '人机验证' in text or ('检查' in text and '连接安全性' in text):
+                return True
+
+        except Exception as e:
+            self.logger.error(f'{e}')
+
+        return False
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         # 关闭浏览器

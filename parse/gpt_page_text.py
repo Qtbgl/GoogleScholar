@@ -34,16 +34,16 @@ class GPTPageParse:
     async def get_abstract(self, cut, html_str):
         root = BeautifulSoup(html_str, 'html.parser')
         web_txt = extract_text(root)
-        # query_txt = '\n'.join([
-        #     '以下是一段不完整的摘要：', cut,
-        #     '以下是该文章/出版物的网页内容：', web_txt,
-        #     '请从上面的网页内容中找出完整的摘要，直接输出'
-        # ])
         query_txt = '\n'.join([
-            'The following is a partial excerpt of an abstract:', cut,
-            'The following is the web content of this article/publication:', web_txt,
-            'Please extract the complete abstract from the web content above and output it directly'
+            '以下是一段不完整的摘要：', cut,
+            '以下是该文章/出版物的网页内容：', web_txt,
+            '请从上面的网页内容中找出完整的摘要，直接以英文输出摘要'
         ])
+        # query_txt = '\n'.join([
+        #     'The following is a partial excerpt of an abstract:', cut,
+        #     'The following is the web content of this article/publication:', web_txt,
+        #     'Please extract the complete abstract from the web content above and output it directly'
+        # ])
 
         try:
             ans = await ask_gpt_async(query_txt)
@@ -59,7 +59,7 @@ class GPTPageParse:
         #     ans
         # ]))
 
-        if '抱歉' in ans:
+        if '抱歉' in ans or "I'm sorry" in ans:
             raise self.GPTAnswerError('GPT回答有误, answer:' + ans)
 
         return ans

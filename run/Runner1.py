@@ -54,7 +54,7 @@ class Runner1:
     async def fetch_page(self, pub):
         try:
             keywords = pub['title'].split()
-            html_str = await self.crawl.fetch_page(pub['url'], keywords[:4])
+            html_str = await self.crawl.fetch_page(pub['url'], keywords=keywords[:4])
             pub['page'] = html_str
             self.record.success_to_fetch_page(pub)
         except Exception as e:
