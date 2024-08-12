@@ -2,7 +2,7 @@ import traceback
 
 from bs4 import BeautifulSoup, Comment
 
-from tools.llm_tools import ask_gpt_async
+from parse.AskGpt import AskGpt
 
 
 def extract_text(root):
@@ -21,15 +21,9 @@ def extract_text(root):
     return web_txt
 
 
-class GPTPageParse:
+class GptDoPageText(AskGpt):
     def __init__(self, logger):
         self.logger = logger
-
-    class GPTQueryError(Exception):
-        pass
-
-    class GPTAnswerError(Exception):
-        pass
 
     async def get_abstract(self, cut, html_str):
         root = BeautifulSoup(html_str, 'html.parser')
@@ -45,12 +39,6 @@ class GPTPageParse:
         #     'Please extract the complete abstract from the web content above and output it directly'
         # ])
 
-        try:
-            ans = await ask_gpt_async(query_txt)
-        except Exception as e:
-            self.logger.error(traceback.format_exc())
-            raise self.GPTQueryError('访问GPT出错')
-
         # logger.info('\n'.join([
         #     ' '
         #     f'                      Query GPT for Page: {pub["url"]}',
@@ -59,7 +47,5 @@ class GPTPageParse:
         #     ans
         # ]))
 
-        if '抱歉' in ans or "I'm sorry" in ans:
-            raise self.GPTAnswerError('GPT回答有误, answer:' + ans)
-
+        ans = await self.ask_gpt(query_txt)
         return ans

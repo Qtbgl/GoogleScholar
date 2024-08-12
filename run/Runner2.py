@@ -7,7 +7,9 @@ import urllib.parse
 from bs4 import BeautifulSoup
 
 from crawl.by_researchgate import ByResearchGate
-from parse.gpt_page_text import GPTPageParse
+from crawl.by_sema import BySema
+from parse.gpt_do_html import GptDoHtml
+from parse.gpt_do_page_text import GptDoPageText
 from record.Record2 import Record2
 from crawl.by_serpdog import BySerpdog, QueryItem
 from crawl.by_nodiver import Crawl
@@ -55,21 +57,115 @@ class Runner2:
             return
 
         try:
-            await self.fill_abstract(pub)
-            # 摘要获取后，再bibtex
-            await self.fill_bibtex(pub, item)
-            # 成功爬取
-            self.record.success_fill(pub)
-        except self.QuitFillPubError as e:
-            # 取消fill这一篇pub
-            self.logger.error(str(e))
-            pub['error'] = 'Error in fill_pub: ' + str(e)
-            self.record.fail_to_fill(pub)
+            # 先获取摘要
+            succeed = await self.fill_abstract_directly(pub)
+
+            if not succeed:
+                succeed = await self.fill_abstract_by_rg(pub)
+
+            if not succeed:
+                succeed = await self.fill_abstract_by_sema(pub)
+
+            if not succeed:
+                self.record.fail_to_fill(pub)
+                return  # 结束后续
+
+            try:
+                # 摘要获取后，再bibtex
+                await self.fill_bibtex(pub, item)
+                # 成功得到
+                self.record.success_fill(pub)
+
+            except self.QuitFillPubError as e:
+                self.logger.error(str(e))
+                pub['error'] = str(e)
+                self.record.fail_to_fill(pub)
+
         except Exception as e:
             # 所有异常不抛出
             self.logger.error(traceback.format_exc())
             pub['error'] = 'Error in fill_pub: ' + str(e)
             self.record.fail_to_fill(pub)
+
+    async def fill_abstract_directly(self, pub):
+        try:
+            page_url = pub['url']
+            if await self.crawl.is_page_pdf(page_url):
+                raise Crawl.PageIsPdfError()
+
+            keywords = pub['title'].split()
+            # 长时间等待
+            html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords[:4])
+
+        except (Crawl.CaptchaPageError, Crawl.WaitPageError, Crawl.PageIsPdfError) as e:
+            self.logger.error(f'直接爬取摘要失败 {e}')
+            return False
+
+        gpt = GptDoPageText(self.logger)
+        try:
+            pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
+        except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+            self.logger.error(f'直接爬取摘要失败 {e}')
+            return False
+
+        return True
+
+    async def fill_abstract_by_rg(self, pub):
+        # 尝试其他方式获取网页
+        # 用reseachgate查询
+        rg = ByResearchGate(self.logger, self.crawl)
+        try:
+            links = await rg.get_links(pub)
+        except rg.GetLinkError as e:
+            self.logger.error(f'Reseachgate获取其他版本链接失败')
+            return False
+
+        gpt = GptDoPageText(self.logger)
+        for link in links:
+            try:
+                self.logger.info(f'尝试Reseachgate的其他版本 {link}')
+                page_url = link
+                if await self.crawl.is_page_pdf(page_url):
+                    raise Crawl.PageIsPdfError()
+
+                kw1 = pub['title'].split()
+                keywords = kw1[:4]
+                # kw2 = [s for s in pub['cut'].split() if re.match(r'^[a-zA-Z]+$', s)]
+                # keywords = kw1[:4] + kw2[:12]  # 用标题和摘要勉强匹配
+                # 长时间等待
+                html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords)
+                # 测试GPT提取
+                pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
+                self.logger.info(f'成功通过Reseachgate获取到其他版本')
+                return True
+
+            except Crawl.PageIsPdfError as e:
+                continue
+            except (Crawl.WaitPageError, Crawl.CaptchaPageError) as e:
+                self.logger.error(str(e))  # 打印原因
+                continue
+            except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+                self.logger.error(str(e))
+                continue
+
+        self.logger.info(f'Reseachgate爬取摘要失败')
+        return False
+
+    async def fill_abstract_by_sema(self, pub):
+        sema = BySema(self.logger, self.crawl)
+        try:
+            paper_html = await sema.get_paper_html(pub)
+        except sema.GetPaperError as e:
+            self.logger.error(f'Semantic Scholar获取网页内容失败 {e}')
+            return False
+
+        gpt = GptDoHtml(self.logger)
+        try:
+            pub['abstract'] = await gpt.get_abstract(paper_html)
+        except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+            self.logger.error(f'Semantic Scholar爬取摘要失败 {e}')
+
+        return True
 
     async def fill_bibtex(self, pub, item):
         bib_link = await self.source.get_bibtex_link(pub, item)
@@ -92,44 +188,3 @@ class Runner2:
 
     class QuitFillPubError(Exception):
         pass
-
-    async def fill_abstract(self, pub: dict):
-        """
-        :param pub:
-        :return: 任何一个环节失败，则抛出异常
-        """
-        # 先爬取pub的网页
-        try:
-            page_url = pub['url']
-            if await self.crawl.is_page_pdf(page_url):
-                raise Crawl.PageIsPdfError()
-
-            keywords = pub['title'].split()
-            # 长时间等待
-            html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords[:4])
-            pub['page'] = html_str
-        except (Crawl.CaptchaPageError, Crawl.WaitPageError, Crawl.PageIsPdfError) as e:
-            self.logger.error(f'直接爬取网页失败 {e}')
-            try:
-                # 尝试其他方式获取网页
-                rg = ByResearchGate(self.logger, self.crawl)
-                await rg.fill_page(pub)
-
-            except ByResearchGate.FillPageError as e:  # 针对特定的异常
-                raise self.QuitFillPubError(e)
-
-        # 再访问GPT，提取摘要
-        try:
-            parse = GPTPageParse(self.logger)
-            url = pub['url']
-            html_str = pub['page']
-
-            self.logger.info(f'GPT in > {url}')
-
-            abstract = await parse.get_abstract(pub['cut'], html_str)
-            pub['abstract'] = abstract
-
-            self.logger.info(f'GPT out > {url}')
-
-        except (GPTPageParse.GPTQueryError, GPTPageParse.GPTAnswerError) as e:
-            raise self.QuitFillPubError(e)

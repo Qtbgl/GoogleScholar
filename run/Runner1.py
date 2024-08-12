@@ -3,7 +3,7 @@ import re
 import time
 import traceback
 
-from parse.gpt_page_text import GPTPageParse
+from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
 from crawl.by_scholarly import ByScholarly, QueryItem
 from crawl.by_nodiver import Crawl
@@ -64,7 +64,7 @@ class Runner1:
             self.record.fail_to_fetch_page(pub)
 
     async def handle_page(self, pub):
-        parse = GPTPageParse(self.logger)
+        parse = GptDoPageText(self.logger)
         flag = False
         try:
             url = pub['url']
@@ -80,9 +80,9 @@ class Runner1:
 
             self.record.success_to_handle_page(pub)
             flag = True
-        except GPTPageParse.GPTQueryError as e:
+        except GptDoPageText.GPTQueryError as e:
             pub['error'] = {'when': '处理内容', 'detail': str(e)}
-        except GPTPageParse.GPTAnswerError as e:
+        except GptDoPageText.GPTAnswerError as e:
             pub['error'] = {'when': '处理内容', 'detail': str(e)}
         except Exception as e:
             self.logger.error('未预料的异常' + '\n' + traceback.format_exc())

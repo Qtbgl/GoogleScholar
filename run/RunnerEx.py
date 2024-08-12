@@ -1,7 +1,7 @@
 import asyncio
 
 from parse.parse_html import HTMLParse
-from parse.gpt_xpath import get_xpath_by_gpt
+from parse.gpt_do_xpath import get_xpath_by_gpt
 from record.Record2 import Record2
 from crawl.by_scholarly import query_scholar
 from crawl.by_nodiver import Crawl

@@ -11,47 +11,19 @@ class ByResearchGate:
         self.logger = logger
         self.crawl = crawl
 
-    class FillPageError(Exception):
+    class GetLinkError(Exception):
         pass
 
-    async def fill_page(self, pub):
+    async def get_links(self, pub):
         try:
-            links = await self.get_links(pub)
+            links = await self._get_links(pub)
             assert len(links) > 0
-            self.logger.info(f'pub成功获取其他版本链接 {len(links)}')
+            return links
         except Exception as e:
-            self.logger.error(traceback.format_exc(chain=False))
-            raise self.FillPageError(f'pub获取其他版本链接失败')
+            self.logger.error(traceback.format_exc(chain=False))  # 函数内具体出错
+            raise self.GetLinkError(e)
 
-        flag = False
-        for link in links:
-            try:
-                self.logger.info(f'pub尝试其他版本 {link}')
-                page_url = link
-                if await self.crawl.is_page_pdf(page_url):
-                    raise Crawl.PageIsPdfError()
-
-                kw1 = pub['title'].split()
-                keywords = kw1[:4]
-                # kw2 = [s for s in pub['cut'].split() if re.match(r'^[a-zA-Z]+$', s)]
-                # keywords = kw1[:4] + kw2[:12]  # 用标题和摘要勉强匹配
-                # 长时间等待
-                html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords)
-                pub['page'] = html_str
-                flag = True
-                self.logger.info(f'pub成功获取到其他版本')
-                break
-            except Crawl.PageIsPdfError as e:
-                continue
-            except (Crawl.WaitPageError, Crawl.CaptchaPageError) as e:
-                self.logger.error(str(e))  # 打印原因
-                continue
-            # 未知异常抛出
-
-        if not flag:
-            raise self.FillPageError(f'{pub["url"]} 获取其他版本失败')
-
-    async def get_links(self, pub: dict):
+    async def _get_links(self, pub: dict):
         title = pub['title']
         payload = {'q': title, }
         url = 'https://www.researchgate.net/search/publication'  # 需要网络支持
