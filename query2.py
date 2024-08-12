@@ -1,8 +1,8 @@
 import asyncio
 import json
-import threading
 import traceback
 from fastapi import Path, Query, WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 from context import app
 
@@ -62,47 +62,42 @@ async def do_query(websocket: WebSocket, item) -> None:
         await goodbye(websocket, {'error': f'record创建出错 {e}'})
         return
 
-    # 线程执行结果
-    result = {'type': 'Result'}
-
-    def new_call():
-        # 使用nodriver爬取网页时，创建新的事件循环
-        logger.info('进入任务线程')
-        loop = asyncio.new_event_loop()  # 为该线程创建新的事件循环
-        asyncio.set_event_loop(loop)
-        try:
-            from run.Runner2 import Runner2
-            runner = Runner2(crawl, record, logger)
-            # 创建任务
-            task = runner.run(item)
-            loop.run_until_complete(task)  # 运行异步任务
-            result['error'] = None
-        except Exception as e:
-            logger.error(f'new_call返回异常 {e}')
-            result['error'] = str(e)   # 异常信息返回，不抛出
-        finally:
-            result['data'] = record.deliver_pubs()
-            loop.close()  # 关事件循环
-            logger.info('已关闭任务线程的事件循环')
-
-    closed = False
+    # 使用nodriver爬取网页时，创建新的事件循环
+    from run.Runner2 import Runner2
+    runner = Runner2(crawl, record, logger)
+    # 创建任务
+    task = asyncio.create_task(runner.run(item))
+    result = {'type': 'Result', 'error': None}
     try:
-        # 在后台线程中运行长任务
-        thread = threading.Thread(target=new_call)
-        thread.start()
-        while thread.is_alive():
+        while not task.done():
             # 获取进度
             obj = {'type': 'Heartbeat', 'progress': record.get_progress()}
             await websocket.send_text(json.dumps(obj))  # 发送心跳消息
             await asyncio.sleep(5)
 
-        thread.join()
-        # 返回总结果
-        await goodbye(websocket, msg_obj=result)
-        closed = True
+        try:
+            await task
+        except Exception as e:
+            # 异常信息返回，不抛出
+            logger.error(f'task error retrieved: {e}')
+            result['error'] = str(e)
+        finally:
+            # 返回任务执行结果
+            result['data'] = record.deliver_pubs()
+            await goodbye(websocket, msg_obj=result)
 
-    except Exception as e:  # 默认是连接问题
-        logger.error(f"Connection closed: \n{traceback.format_exc()}")
+    except WebSocketDisconnect as e:
+        logger.error(f"Connection closed: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected Error: {type(e)} {e} \n{traceback.format_exc()}")
+        try:
+            await websocket.close()
+        except Exception as e:
+            logger.error(f"Unexpected Error: {type(e)} {e}")
     finally:
-        if not closed:
-            await websocket.close()  # 关闭连接
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                logger.info("Task was cancelled!")
