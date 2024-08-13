@@ -40,7 +40,8 @@ class Runner2:
                 tasks = [self.fill_pub(pub, item) for pub in pubs]  # 假设协程内已处理异常
                 await asyncio.gather(*tasks)
 
-        except KeyboardInterrupt:
+        except asyncio.CancelledError as e:
+            self.logger.error('任务取消' + '\n' + traceback.format_exc())
             raise
         except Exception as e:
             self.logger.error('未预料的异常' + '\n' + traceback.format_exc())
@@ -67,20 +68,19 @@ class Runner2:
                 succeed = await self.fill_abstract_by_sema(pub)
 
             if not succeed:
+                pub['error'] = '摘要无法获取'
                 self.record.fail_to_fill(pub)
-                return  # 结束后续
+                return  # 结束后续环节
 
-            try:
-                # 摘要获取后，再bibtex
-                await self.fill_bibtex(pub, item)
-                # 成功得到
+            # 摘要获取后，再bibtex
+            if await self.fill_bibtex(pub, item):
                 self.record.success_fill(pub)
-
-            except self.QuitFillPubError as e:
-                self.logger.error(str(e))
-                pub['error'] = str(e)
+            else:
+                pub['error'] = 'BibTeX未正常获取'
                 self.record.fail_to_fill(pub)
 
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             # 所有异常不抛出
             self.logger.error(traceback.format_exc())
@@ -104,6 +104,7 @@ class Runner2:
         gpt = GptDoPageText(self.logger)
         try:
             pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
+            self.logger.info(f'直接爬取到摘要 {pub["url"]}')
         except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
             self.logger.error(f'直接爬取摘要失败 {e}')
             return False
@@ -165,8 +166,12 @@ class Runner2:
         return False
 
     async def fill_bibtex(self, pub, item):
-        bib_link = await self.source.get_bibtex_link(pub, item)
+        pub['BibTeX'] = {'link': None, 'string': None}
         try:
+            # 获取链接
+            bib_link = await self.source.get_bibtex_link(pub, item)
+            pub['BibTeX']['link'] = bib_link
+            # 获取内容
             html_str = await self.crawl.fetch_page(bib_link, wait_sec=1)
             string = html_str
             match = re.search(r'@(\w+)\{(.*\})', string, re.DOTALL)
@@ -174,14 +179,18 @@ class Runner2:
                 self.logger.error('尝试用serpdog爬取BibTeX ' + bib_link)
                 # 尝试用serpdog api抓取
                 string = await self.source.get_bibtex_string(bib_link, item)
-                pub['BibTeX'] = {'link': bib_link, 'string': string}
+                pub['BibTeX']['string'] = string
             else:
-                pub['BibTeX'] = {'link': bib_link, 'string': match.group()}
+                pub['BibTeX']['string'] = match.group()
 
+            # 成功返回
+            return True
+
+        except asyncio.CancelledError:
+            raise
+        except BySerpdog.SerpdogError as e:
+            self.logger.error(e)
+            return False
         except Exception as e:
-            self.logger.error(traceback.format_exc())
-            pub['BibTeX'] = {'link': bib_link, 'string': None}
-            raise self.QuitFillPubError(f'BibTeX未正常获取 {str(e)}')
-
-    class QuitFillPubError(Exception):
-        pass
+            self.logger.error(traceback.format_exc(chain=False))
+            return False

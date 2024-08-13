@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 import urllib.parse
 
@@ -32,6 +33,8 @@ class ByResearchGate:
             links = await self._get_links(pub)
             assert len(links) > 0
             return links
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.logger.error(traceback.format_exc(chain=False))  # 函数内具体出错
             raise self.GetLinkError(e)

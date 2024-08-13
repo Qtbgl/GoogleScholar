@@ -74,21 +74,27 @@ class BySerpdog:
                 # 创建查询
                 payload = get_payload(item, i)
                 async with session.get('https://api.serpdog.io/scholar', params=payload) as resp:
-                    assert resp.status == 200, 'serpdog\'s api请求失败'
+                    if resp.status != 200:
+                        self.logger.error(f'{resp.status} {await resp.text()}')
+                        raise self.SerpdogError('serpdog\'s api请求失败')
+
                     pubs = self.parse_pubs(await resp.json(encoding='utf-8'))
                     # generate new group of pubs
                     yield pubs
         # 暂时不处理异常
 
-    async def get_bibtex_link(self, pub, item):
-        api_key = item.api_key
+    async def get_bibtex_link(self, pub, item: QueryItem):
+        api_key = item.payload.api_key
         payload = {
             'api_key': api_key,
             'q': pub['id'],
         }
         async with aiohttp.ClientSession() as session:
             async with session.get('https://api.serpdog.io/scholar_cite', params=payload) as resp:
-                assert resp.status == 200, 'serpdog\'s api请求失败'
+                if resp.status != 200:
+                    self.logger.error(f'{resp.status} {await resp.text()}')
+                    raise self.SerpdogError('serpdog\'s api请求失败')
+
                 obj = await resp.json(encoding='utf-8')  # 不太会是中文
                 # 解析链接
                 for link in obj['links']:
@@ -98,12 +104,18 @@ class BySerpdog:
                 raise KeyError(f'No BibTeX link in {obj}')
         # 未处理异常
 
-    async def get_bibtex_string(self, bibtex_link, item):
-        api_key = item.api_key
+    async def get_bibtex_string(self, bibtex_link, item: QueryItem):
+        api_key = item.payload.api_key
         bibtex_link = quote(bibtex_link)
         payload = {'api_key': api_key, 'url': bibtex_link, 'render_js': 'false'}
         async with aiohttp.ClientSession() as session:
             async with session.get('https://api.serpdog.io/scrape', params=payload) as resp:
-                assert resp.status == 200, 'serpdog\'s api请求失败'
+                if resp.status != 200:
+                    self.logger.error(f'{resp.status} {await resp.text()}')
+                    raise self.SerpdogError('serpdog\'s api请求失败')
+
                 string = await resp.text(encoding='utf-8')
                 return string
+
+    class SerpdogError(Exception):
+        pass

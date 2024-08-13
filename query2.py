@@ -87,7 +87,7 @@ async def do_query(websocket: WebSocket, item) -> None:
             await goodbye(websocket, msg_obj=result)
 
     except WebSocketDisconnect as e:
-        logger.error(f"Connection closed: {e}")
+        logger.error(f"Connection closed: {type(e)} {e}")
     except Exception as e:
         logger.error(f"Unexpected Error: {type(e)} {e} \n{traceback.format_exc()}")
         try:
@@ -96,6 +96,7 @@ async def do_query(websocket: WebSocket, item) -> None:
             logger.error(f"Unexpected Error: {type(e)} {e}")
     finally:
         if not task.done():
+            logger.info('Task not done, canceling...')
             task.cancel()
             try:
                 await task

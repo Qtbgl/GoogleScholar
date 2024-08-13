@@ -59,7 +59,7 @@ class Crawl:
             return content
         except asyncio.exceptions.TimeoutError as e:
             self.logger.error(f'{e}')
-            raise self.WaitPageError(f'nodriver等待页面加载失败 url:{url} wait_for:{keywords}')
+            raise self.WaitPageError(f'nodriver等待页面加载失败 url:{url} wait_for:{keywords, selectors}')
         finally:
             await page.close()  # debug 关闭页面，释放内存
 
@@ -80,8 +80,8 @@ class Crawl:
             return False
 
     async def has_captcha(self, page) -> bool:
+        text = await page.get_content()
         try:
-            text = await page.get_content()
             # 似乎无效果
             if 'captcha' in text or 'Captcha' in text or 'CAPTCHA' in text:
                 return True
@@ -90,7 +90,7 @@ class Crawl:
             if '人机验证' in text or ('检查' in text and '连接安全性' in text):
                 return True
 
-        except Exception as e:
+        except Exception as e:  # 吸收任何异常
             self.logger.error(f'{e}')
 
         return False
@@ -102,7 +102,7 @@ class Crawl:
             self.browser.stop()  # 标准关闭
         except Exception as e:
             self.logger.info(traceback.format_exc())
-            raise e
+            raise e  # 再次抛出，不影响原异常
 
 
 def stop(browser, logger):
