@@ -124,16 +124,7 @@ class Runner2:
         for link in links:
             try:
                 self.logger.info(f'尝试Reseachgate的其他版本 {link}')
-                page_url = link
-                if await self.crawl.is_page_pdf(page_url):
-                    raise Crawl.PageIsPdfError()
-
-                kw1 = pub['title'].split()
-                keywords = kw1[:4]
-                # kw2 = [s for s in pub['cut'].split() if re.match(r'^[a-zA-Z]+$', s)]
-                # keywords = kw1[:4] + kw2[:12]  # 用标题和摘要勉强匹配
-                # 长时间等待
-                html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords)
+                html_str = await rg.get_html(link, pub)
                 # 测试GPT提取
                 pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
                 self.logger.info(f'成功通过Reseachgate获取到其他版本')
@@ -155,17 +146,23 @@ class Runner2:
         sema = BySema(self.logger, self.crawl)
         try:
             paper_html = await sema.get_paper_html(pub)
+            self.logger.info(f'成功在Semantic Scholar上找到相同文献 {len(paper_html)}')
         except sema.GetPaperError as e:
             self.logger.error(f'Semantic Scholar获取网页内容失败 {e}')
             return False
 
         gpt = GptDoHtml(self.logger)
-        try:
-            pub['abstract'] = await gpt.get_abstract(paper_html)
-        except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
-            self.logger.error(f'Semantic Scholar爬取摘要失败 {e}')
+        for html_str in paper_html:
+            try:
+                pub['abstract'] = await gpt.get_abstract(html_str)
+                self.logger.info(f'成功通过Semantic Scholar获取到摘要')
+                return True
+            except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+                self.logger.error(str(e))
+                continue
 
-        return True
+        self.logger.error(f'Semantic Scholar爬取摘要失败')
+        return False
 
     async def fill_bibtex(self, pub, item):
         bib_link = await self.source.get_bibtex_link(pub, item)
