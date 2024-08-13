@@ -52,10 +52,16 @@ class Runner2:
     async def fill_pub(self, pub, item):
         min_cite = item.min_cite
         # 过滤引用数量
-        if min_cite is not None and pub['num_citations'] < min_cite:
-            pub['error'] = f'引用数量不足 {pub["num_citations"]} < {min_cite}'
-            self.record.fail_to_fill(pub)
-            return
+        if min_cite is not None:
+            num_citations = pub.get('num_citations')
+            if num_citations is None:
+                pub['error'] = f'无引用数量信息'
+                self.record.fail_to_fill(pub)
+                return
+            elif num_citations < min_cite:
+                pub['error'] = f'引用数量不足 {pub["num_citations"]} < {min_cite}'
+                self.record.fail_to_fill(pub)
+                return
 
         try:
             # 先获取摘要

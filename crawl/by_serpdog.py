@@ -50,7 +50,7 @@ class BySerpdog:
         obj = json_obj
         pubs = []
         for res in obj["scholar_results"]:
-            cited = res['inline_links']['cited_by']['total']
+            m_cited = re.search(r'\d+', res['inline_links']['cited_by']['total'])
             resources = res.get('resources', [])
             pubs.append({
                 'id': res["id"],
@@ -58,7 +58,7 @@ class BySerpdog:
                 'cut': res['snippet'],
                 'title': res['title'],
                 'author': res['displayed_link'],
-                'num_citations': re.search(r'\d+', cited).group(),
+                'num_citations': int(m_cited.group()) if m_cited else None,
                 'eprint_url': resources[0]['link'] if len(resources) else None,
                 'versions_url': res['inline_links']['versions']['link'],
             })
