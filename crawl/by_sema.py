@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 import urllib.parse
 
@@ -23,6 +24,8 @@ class BySema:
         page = await self.crawl.browser.get(url, new_tab=True)
         try:
             return await self._get_paper_html(pub, page)
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.logger.error(traceback.format_exc(chain=False))
             raise self.GetPaperError()
@@ -63,6 +66,8 @@ class BySema:
             try:
                 html = await self._get_target_html(target, page)
                 htmls.append(html)
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 # 不中断
                 self.logger.error(traceback.format_exc(chain=False))

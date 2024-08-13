@@ -34,7 +34,7 @@ class Record2(Conn):
         for pub in all_pubs:
             abstract = pub.get('abstract')
             bib_link = pub.get('BibTeX', empty_bib).get('link')
-            bib_raw = pub.get('BibTex', empty_bib).get('string')
+            bib_raw = pub.get('BibTeX', empty_bib).get('string')
             # bib加入摘要
             if abstract and bib_raw:
                 bib_str = add_abstract(bib_raw, abstract)
