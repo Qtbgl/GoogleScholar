@@ -11,7 +11,7 @@ def split_name(name):
     返回:
     tuple: 包含姓和名的元组。
     """
-    parts = re.findall(r'[A-Z][a-z]*', name)
+    parts = re.split(r'[^A-Za-z]+', name)
     first = parts[0]
     last = max(parts[1:], key=len)
     return first, last
