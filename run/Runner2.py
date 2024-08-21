@@ -52,7 +52,7 @@ class Runner2:
     async def fill_pub(self, pub, item):
         min_cite = item.min_cite
         # 过滤引用数量
-        if min_cite is not None:
+        if min_cite is not None and min_cite > 0:
             num_citations = pub.get('num_citations')
             if num_citations is None:
                 pub['error'] = f'无引用数量信息'

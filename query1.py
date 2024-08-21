@@ -2,13 +2,12 @@ import asyncio
 import json
 import threading
 import traceback
-from typing import Union
 
 from context import app
 
-from fastapi import Path, Query, WebSocket
+from fastapi import Path, WebSocket
 
-from secure import check_key, get_general_params
+from tools.param_tools import check_key, get_general_params
 
 
 @app.websocket("/query1/{name}")

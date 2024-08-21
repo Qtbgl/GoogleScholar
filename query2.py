@@ -1,7 +1,7 @@
 import asyncio
 import json
 import traceback
-from fastapi import Path, Query, WebSocket
+from fastapi import Path, WebSocket
 from starlette.websockets import WebSocketDisconnect
 
 from context import app
@@ -23,7 +23,7 @@ async def query2(
         data = await websocket.receive_text()
         obj = json.loads(data)
 
-        from secure import Params, check_key
+        from tools.param_tools import Params, check_key
         check_key(obj)
         assert obj.get('serpdog_key') is not None, '缺少serpdog_key'
 

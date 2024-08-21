@@ -50,7 +50,14 @@ class BySerpdog:
         obj = json_obj
         pubs = []
         for res in obj["scholar_results"]:
-            m_cited = re.search(r'\d+', res['inline_links']['cited_by']['total'])
+            num_citations = None
+            if 'cited_by' in res['inline_links'] and 'total' in res['inline_links']['cited_by']:
+                m_cited = re.search(r'\d+', res['inline_links']['cited_by']['total'])
+                if m_cited is None:
+                    self.logger.debug(f"记录cited_by存在但无法提取情况：{res['inline_links']['cited_by']['total']}")
+                else:
+                    num_citations = int(m_cited.group())
+
             resources = res.get('resources', [])
             pubs.append({
                 'id': res["id"],
@@ -58,9 +65,8 @@ class BySerpdog:
                 'cut': res['snippet'],
                 'title': res['title'],
                 'author': res['displayed_link'],
-                'num_citations': int(m_cited.group()) if m_cited else None,
+                'num_citations': num_citations,
                 'eprint_url': resources[0]['link'] if len(resources) else None,
-                'versions_url': res['inline_links']['versions']['link'],
             })
         return pubs
 
