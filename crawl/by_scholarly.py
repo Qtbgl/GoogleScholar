@@ -1,7 +1,21 @@
 import traceback
-
+import urllib.request
 from scholarly import scholarly, ProxyGenerator
 from scholarly._proxy_generator import MaxTriesExceededException
+
+from data import api_config
+
+
+# 配置代理
+def set_proxy(proxy_auth):
+    proxy = urllib.request.ProxyHandler({'https': f'http://{proxy_auth}'})
+    opener = urllib.request.build_opener(proxy, urllib.request.HTTPHandler)
+    urllib.request.install_opener(opener)
+
+
+# 代理信息
+proxy_auth = api_config.ipfoxy_proxy_auth
+set_proxy(proxy_auth)
 
 
 class QueryItem:
