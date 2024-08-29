@@ -44,7 +44,7 @@ class ByScholarly:
 
         # 通过原始pub对象获取
         raw_pub = pub['raw_pub']
-        pub['BibTex']['link'] = 'https://scholar.google.com' + raw_pub['url_scholarbib']
+        pub['BibTeX']['link'] = 'https://scholar.google.com' + raw_pub['url_scholarbib']
 
         try:
             pub['BibTeX']['string'] = scholarly.bibtex(raw_pub)
@@ -59,11 +59,12 @@ class ByScholarly:
         :return: 一次生成最多10篇文章
         """
         name = item.name
-        i = 0  # 第0页开始
-        pubs = []
+        pages = item.pages
         try:
             q = scholarly.search_pubs(name, year_low=item.year_low, year_high=item.year_high)
-            # 调用生成器
+            i = 0  # 从第0页开始
+            pubs = []
+            # 遍历生成器，结束时自动退出
             for res in q:
                 pub = self.parse_pub(res)
                 pubs.append(pub)
@@ -71,9 +72,9 @@ class ByScholarly:
                     full_page = pubs
                     pubs = []  # 重新装载
                     yield full_page
-                    # 新一页
+
                     i += 1
-                    if i > item.pages:
+                    if i >= item.pages:  # debug
                         break
         except MaxTriesExceededException as e:
             self.logger.error(traceback.format_exc())

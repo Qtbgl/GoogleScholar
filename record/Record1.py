@@ -40,6 +40,7 @@ class Record1(Conn):
             if abstract and bib_raw:
                 bib_str = add_abstract(bib_raw, abstract)
             else:
+                # abstract未获取情况
                 bib_str = None
 
             item = {

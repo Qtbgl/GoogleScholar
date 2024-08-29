@@ -66,11 +66,13 @@ class Runner1:
                 # 只记录，不退出
 
             # 暂时直接阻塞地获取bibtex
-            if await self.source.fill_bibtex(pub):
-                self.record.success_fill(pub)
-            else:
+            succeed = self.source.fill_bibtex(pub)
+            if not succeed:
                 pub['error'] = 'BibTeX未正常获取'
                 self.record.fail_to_fill(pub)
+                return
+
+            self.record.success_fill(pub)
 
         except asyncio.CancelledError:
             raise
