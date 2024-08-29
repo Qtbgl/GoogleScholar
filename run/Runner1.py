@@ -3,7 +3,7 @@ import traceback
 
 from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
-from crawl.by_scholarly import ByScholarly, QueryItem
+from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError
 from crawl.by_nodiver import Crawl
 
 
@@ -26,7 +26,7 @@ class Runner1:
         self.record.set_pages(item.pages)
         try:
             # for every 10 pubs
-            for pubs in self.source.query_scholar(item):
+            async for pubs in self.source.query_scholar(item):
                 # 爬取网页
                 self.logger.info(f'准备异步爬取pubs {len(pubs)}')
                 tasks = [self.fill_pub(pub, item) for pub in pubs]
@@ -35,8 +35,8 @@ class Runner1:
         except asyncio.CancelledError as e:
             self.logger.error('任务取消' + '\n' + traceback.format_exc())
             raise
-        except ByScholarly.QueryScholarlyError as e:
-            self.logger.error(f'scholarly出问题 {e}')
+        except QueryScholarlyError as e:
+            self.logger.error(e)
             raise e
         except Exception as e:
             self.logger.error('未预料的异常' + '\n' + traceback.format_exc())
@@ -66,7 +66,7 @@ class Runner1:
                 # 只记录，不退出
 
             # 暂时直接阻塞地获取bibtex
-            succeed = self.source.fill_bibtex(pub)
+            succeed = await self.source.fill_bibtex(pub)
             if not succeed:
                 pub['error'] = 'BibTeX未正常获取'
                 self.record.fail_to_fill(pub)

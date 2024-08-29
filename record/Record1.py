@@ -1,5 +1,5 @@
 from record.Conn import Conn
-from tools.bib_tools import add_abstract
+from tools.bib_tools import add_abstract, del_abstract
 
 
 class Record1(Conn):
@@ -36,12 +36,13 @@ class Record1(Conn):
             abstract = pub.get('abstract')
             bib_link = pub.get('BibTeX', empty_bib).get('link')
             bib_raw = pub.get('BibTeX', empty_bib).get('string')
+            bib_str = None
             # bib加入摘要
-            if abstract and bib_raw:
-                bib_str = add_abstract(bib_raw, abstract)
-            else:
-                # abstract未获取情况
-                bib_str = None
+            if bib_raw:
+                if abstract is None:
+                    bib_str = del_abstract(bib_raw)
+                else:
+                    bib_str = add_abstract(bib_raw, abstract)
 
             item = {
                 'abstract': abstract,

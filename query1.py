@@ -56,11 +56,15 @@ async def query1(
         await goodbye({'error': f'record创建出错 {e}'})
         return
 
-    from run.Runner1 import Runner1
-    runner = Runner1(crawl, record, logger)
+    try:
+        from run.Runner1 import Runner1
+        runner = Runner1(crawl, record, logger)
+        # 创建任务
+        task = asyncio.create_task(runner.run(item))
+    except Exception as e:
+        await goodbye({'error': f'创建任务时出错 {e}'})
+        return
 
-    # 创建任务
-    task = asyncio.create_task(runner.run(item))
     result = {'type': 'Result', 'error': None}
     try:
         while not task.done():
