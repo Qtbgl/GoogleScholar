@@ -1,6 +1,4 @@
 import asyncio
-import re
-import time
 import traceback
 
 from parse.gpt_do_page_text import GptDoPageText
@@ -15,6 +13,7 @@ class Runner1:
         self.crawl = crawl
         self.record = record
         self.logger = logger
+        self.source = ByScholarly(self.logger)
 
     async def run(self, item):
         async with self.crawl:
@@ -25,68 +24,83 @@ class Runner1:
         # 创建查询
         self.logger.info(f'任务查询 {item}')
         self.record.set_pages(item.pages)
-        source = ByScholarly(self.logger)
         try:
             # for every 10 pubs
-            for pubs in source.query_scholar(item):
+            for pubs in self.source.query_scholar(item):
                 # 爬取网页
                 self.logger.info(f'准备异步爬取pubs {len(pubs)}')
-                tasks = [self.fetch_page(pub) for pub in pubs]
+                tasks = [self.fill_pub(pub, item) for pub in pubs]
                 await asyncio.gather(*tasks)  # 异步浏览器爬取
-        except KeyboardInterrupt:
+
+        except asyncio.CancelledError as e:
+            self.logger.error('任务取消' + '\n' + traceback.format_exc())
             raise
         except ByScholarly.QueryScholarlyError as e:
-            if len(self.record.cand_pubs):
-                pass
-            else:
-                raise e
+            self.logger.error(f'scholarly出问题 {e}')
+            raise e
         except Exception as e:
             self.logger.error('未预料的异常' + '\n' + traceback.format_exc())
             raise Exception(f'发生异常，中断爬取 {e}')
 
-        # 处理内容
-        self.logger.info(f'准备异步请求GPT处理pages {len(self.record.cand_pubs)}')
-        tasks = [self.handle_page(pub) for pub in self.record.cand_pubs]
-        await asyncio.gather(*tasks)  # 假设异常已在协程中处理
-
         # 不返回结果
 
-    async def fetch_page(self, pub):
+    async def fill_pub(self, pub, item: QueryItem):
+        min_cite = item.min_cite
+        # 过滤引用数量
+        if min_cite is not None and min_cite > 0:
+            num_citations = pub.get('num_citations')
+            if num_citations is None:
+                pub['error'] = f'无引用数量信息'
+                self.record.fail_to_fill(pub)
+                return
+            elif num_citations < min_cite:
+                pub['error'] = f'引用数量不足 {pub["num_citations"]} < {min_cite}'
+                self.record.fail_to_fill(pub)
+                return
+
         try:
-            keywords = pub['title'].split()
-            html_str = await self.crawl.fetch_page(pub['url'], keywords=keywords[:4])
-            pub['page'] = html_str
-            self.record.success_to_fetch_page(pub)
+            # 直接获取网页上的摘要
+            succeed = await self.fill_abstract(pub)
+            if not succeed:
+                pub['abstract'] = None
+                # 只记录，不退出
+
+            # 暂时直接阻塞地获取bibtex
+            if await self.source.fill_bibtex(pub):
+                self.record.success_fill(pub)
+            else:
+                pub['error'] = 'BibTeX未正常获取'
+                self.record.fail_to_fill(pub)
+
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
-            # 浏览器爬取出错
+            # 所有异常不抛出
             self.logger.error(traceback.format_exc())
-            pub['error'] = {'when': 'nodriver爬取网页'}  # 标记这个pub
-            self.record.fail_to_fetch_page(pub)
+            pub['error'] = 'Error in fill_pub: ' + str(e)
+            self.record.fail_to_fill(pub)
 
-    async def handle_page(self, pub):
-        parse = GptDoPageText(self.logger)
-        flag = False
+    async def fill_abstract(self, pub):
         try:
-            url = pub['url']
-            html_str = pub['page']
-            self.logger.info(f'GPT in > {url}')
+            page_url = pub['url']
+            if await self.crawl.is_page_pdf(page_url):
+                raise Crawl.PageIsPdfError()
 
-            # 异步请求
+            keywords = pub['title'].split()
+            # 暂时等待很长一段时间
+            html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords[:4])
+
+        except (Crawl.CaptchaPageError, Crawl.WaitPageError, Crawl.PageIsPdfError) as e:
+            self.logger.error(f'直接爬取摘要失败 {e}')
+            return False
+
+        gpt = GptDoPageText(self.logger)
+        try:
             # 访问GPT，提取结果
-            abstract = await parse.get_abstract(pub['cut'], html_str)
-            pub['abstract'] = abstract
+            pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
+            self.logger.info(f'直接爬取到摘要 {pub["url"]}')
+        except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+            self.logger.error(f'直接爬取摘要失败 {e}')
+            return False
 
-            self.logger.info(f'GPT out > {url}')
-
-            self.record.success_to_handle_page(pub)
-            flag = True
-        except GptDoPageText.GPTQueryError as e:
-            pub['error'] = {'when': '处理内容', 'detail': str(e)}
-        except GptDoPageText.GPTAnswerError as e:
-            pub['error'] = {'when': '处理内容', 'detail': str(e)}
-        except Exception as e:
-            self.logger.error('未预料的异常' + '\n' + traceback.format_exc())
-            pub['error'] = {'when': '处理内容'}
-        finally:
-            if not flag:
-                self.record.fail_to_handle_page(pub)
+        return True

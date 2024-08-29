@@ -9,12 +9,14 @@ class QueryItem:
     pages: int
     year_low: int
     year_high: int
+    min_cite: int
 
-    def __init__(self, name, pages, year_low=None, year_high=None):
+    def __init__(self, name, pages, year_low=None, year_high=None, min_cite=None):
         self.name = name
         self.pages = pages
         self.year_low = year_low
         self.year_high = year_high
+        self.min_cite = min_cite
 
     def __str__(self):
         return str(self.__dict__)
@@ -27,16 +29,30 @@ class ByScholarly:
     def parse_pub(self, json_obj):
         pub = json_obj
         author = ', '.join(pub['bib']['author'])
-        string = scholarly.bibtex(pub)
         return {
             'cut': pub['bib']['abstract'],
             'url': pub['pub_url'],
             'author': author,
             'title': pub['bib']['title'],
             'num_citations': pub['num_citations'],
-            'BibTeX': {'string': string, 'link': None},
             'eprint_url': pub.get('eprint_url'),
+            'raw_pub': pub,
         }
+
+    def fill_bibtex(self, pub):
+        pub['BibTeX'] = {'link': None, 'string': None}
+
+        # 通过原始pub对象获取
+        raw_pub = pub['raw_pub']
+        pub['BibTex']['link'] = 'https://scholar.google.com' + raw_pub['url_scholarbib']
+
+        try:
+            pub['BibTeX']['string'] = scholarly.bibtex(raw_pub)
+        except Exception as e:
+            self.logger.error('scholarly库获取bibtex失败\n' + traceback.format_exc())
+            return False
+
+        return True
 
     def query_scholar(self, item: QueryItem):
         """
