@@ -61,14 +61,17 @@ class ByScholarly:
         else:
             pub['BibTeX']['link'] = None
 
-        try:
-            bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
-            pub['BibTeX']['string'] = bib_str
-        except Exception as e:
-            self.logger.error('scholarly库获取bibtex失败\n' + traceback.format_exc())
-            return False
+        for i in range(3):
+            try:
+                bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
+                pub['BibTeX']['string'] = bib_str
+                return True
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.logger.error(f'scholarly.bibtex失败, 次数{i+1} {e}')
 
-        return True
+        return False
 
     async def query_scholar(self, item: QueryItem):
         """
