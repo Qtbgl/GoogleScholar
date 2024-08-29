@@ -4,18 +4,17 @@ from scholarly import scholarly, ProxyGenerator
 from scholarly._proxy_generator import MaxTriesExceededException
 
 from data import api_config
-
+from log_config import logger
 
 # 配置代理
-def set_proxy(proxy_auth):
-    proxy = urllib.request.ProxyHandler({'https': f'http://{proxy_auth}'})
-    opener = urllib.request.build_opener(proxy, urllib.request.HTTPHandler)
-    urllib.request.install_opener(opener)
+pg = ProxyGenerator()
+succeed = pg.SingleProxy(api_config.ipfoxy_proxy_auth)
+logger.debug(f'SingleProxy设置succeed = {succeed}')
+if not succeed:
+    raise Exception('scholarly setting Proxy failed')
 
-
-# 代理信息
-proxy_auth = api_config.ipfoxy_proxy_auth
-set_proxy(proxy_auth)
+# success = pg.SingleProxy(http = <your http proxy>, https = <your https proxy>)
+scholarly.use_proxy(pg, secondary_proxy_generator=pg)
 
 
 class QueryItem:
