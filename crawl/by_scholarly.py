@@ -5,16 +5,6 @@ from scholarly import scholarly, ProxyGenerator
 from data import api_config
 from log_config import logger
 
-# 配置代理
-pg = ProxyGenerator()
-succeed = pg.SingleProxy(api_config.ipfoxy_proxy_auth)
-logger.debug(f'SingleProxy设置succeed = {succeed}')
-if not succeed:
-    raise Exception('scholarly setting Proxy failed')
-
-# success = pg.SingleProxy(http = <your http proxy>, https = <your https proxy>)
-scholarly.use_proxy(pg, secondary_proxy_generator=pg)
-
 
 class QueryItem:
     name: str
@@ -32,6 +22,19 @@ class QueryItem:
 
     def __str__(self):
         return str(self.__dict__)
+
+
+def use_proxy():
+    # 配置代理
+    pg = ProxyGenerator()
+    succeed = pg.SingleProxy(api_config.ipfoxy_proxy_auth)
+    logger.debug(f'SingleProxy设置succeed = {succeed}')
+    if not succeed:
+        return False
+
+    # success = pg.SingleProxy(http = <your http proxy>, https = <your https proxy>)
+    scholarly.use_proxy(pg, secondary_proxy_generator=pg)
+    return True
 
 
 class ByScholarly:

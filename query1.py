@@ -49,6 +49,12 @@ async def query1(
         await goodbye({'error': f'nodriver启动浏览器出错 {e}'})
         return
 
+    from crawl.by_scholarly import use_proxy
+    succeed = use_proxy()
+    if not succeed:
+        await goodbye({'error': f'scholarly setting Proxy failed'})
+        return
+
     try:
         from record.Record1 import Record1
         record = Record1(logger)
