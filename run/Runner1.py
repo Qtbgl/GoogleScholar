@@ -5,6 +5,7 @@ from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
 from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError
 from crawl.by_nodiver import Crawl
+from tools.nodriver_tools import wait_for_text
 
 
 class Runner1:
@@ -59,14 +60,16 @@ class Runner1:
                 return
 
         try:
-            # 直接获取网页上的摘要
-            succeed = await self.fill_abstract(pub)
+            # 异步执行两个任务
+            task_fill_abstract = asyncio.create_task(self.fill_abstract(pub))
+            task_fill_bibtex = asyncio.create_task(self.source.fill_bibtex(pub))
+
+            succeed = await task_fill_abstract
             if not succeed:
                 pub['abstract'] = None
                 # 只记录，不退出
 
-            # 暂时直接阻塞地获取bibtex
-            succeed = await self.source.fill_bibtex(pub)
+            succeed = await task_fill_bibtex
             if not succeed:
                 pub['error'] = 'BibTeX未正常获取'
                 self.record.fail_to_fill(pub)
@@ -83,26 +86,30 @@ class Runner1:
             self.record.fail_to_fill(pub)
 
     async def fill_abstract(self, pub):
-        try:
-            page_url = pub['url']
-            if await self.crawl.is_page_pdf(page_url):
-                raise Crawl.PageIsPdfError()
-
-            keywords = pub['title'].split()
-            # 暂时等待很长一段时间
-            html_str = await self.crawl.fetch_page(page_url, wait_sec=10, keywords=keywords[:4])
-
-        except (Crawl.CaptchaPageError, Crawl.WaitPageError, Crawl.PageIsPdfError) as e:
-            self.logger.error(f'直接爬取摘要失败 {e}')
+        page_url = pub['url']
+        if await self.crawl.is_page_pdf(page_url):
+            self.logger.error(f'直接爬取摘要失败，网页是pdf')
             return False
+
+        title = pub['title']
+        page = await self.crawl.browser.get(page_url, new_tab=True)
+        try:
+            await page.wait(2)
+            text = title[:20]  # 检查存在
+            html_str = await wait_for_text(text, page, timeout=30)
+        except asyncio.TimeoutError as e:
+            self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
+            return False
+        finally:
+            await page.close()
 
         gpt = GptDoPageText(self.logger)
         try:
             # 访问GPT，提取结果
             pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
-            self.logger.info(f'直接爬取到摘要 {pub["url"]}')
+            self.logger.info(f'直接爬取到摘要 {page_url}')
         except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
-            self.logger.error(f'直接爬取摘要失败 {e}')
+            self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
             return False
 
         return True

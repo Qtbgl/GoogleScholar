@@ -5,3 +5,5 @@ GoogleScholar下创建data目录，
 设置 ipfoxy_proxy_auth
 
 设置 app_key
+
+设置 scholarly_use_proxy

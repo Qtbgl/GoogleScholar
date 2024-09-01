@@ -1,5 +1,7 @@
 **/*.pyc
 **/*.log
+**/*.jpg
+**/*.png
 .idea/
 data/
 test_code/
