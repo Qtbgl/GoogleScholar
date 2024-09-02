@@ -3,7 +3,7 @@ import traceback
 
 from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
-from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError
+from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError, get_version_urls
 from crawl.by_nodiver import Crawl
 from tools.nodriver_tools import wait_for_text
 
@@ -59,57 +59,114 @@ class Runner1:
                 self.record.fail_to_fill(pub)
                 return
 
+        # 异步执行两个任务
+        task_abstract = asyncio.create_task(self.fill_abstract(pub))
+        task_bibtex = asyncio.create_task(self.source.fill_bibtex(pub))
         try:
-            # 异步执行两个任务
-            task_fill_abstract = asyncio.create_task(self.fill_abstract(pub))
-            task_fill_bibtex = asyncio.create_task(self.source.fill_bibtex(pub))
-
-            succeed = await task_fill_abstract
+            succeed = await task_abstract
             if not succeed:
+                # 再次尝试
+                task_abstract = asyncio.create_task(self.fill_abstract_2(pub))
+
+            succeed = await task_abstract
+            if not succeed:
+                # 只记录为空，不退出
                 pub['abstract'] = None
-                # 只记录，不退出
-
-            succeed = await task_fill_bibtex
-            if not succeed:
-                pub['error'] = 'BibTeX未正常获取'
-                self.record.fail_to_fill(pub)
-                return
-
-            self.record.success_fill(pub)
 
         except asyncio.CancelledError:
             raise
         except Exception as e:
             # 所有异常不抛出
             self.logger.error(traceback.format_exc())
-            pub['error'] = 'Error in fill_pub: ' + str(e)
+            pub['error'] = f'爬取摘要时出错 {e}'
             self.record.fail_to_fill(pub)
+            # 取消任务
+            task_abstract.cancel()
+            # 结束退出，因为是未预料的异常
+            return
 
-    async def fill_abstract(self, pub):
-        page_url = pub['url']
+        try:
+            # 等待bib异步任务结束
+            succeed = await task_bibtex
+            if not succeed:
+                pub['error'] = 'BibTeX未正常获取'
+                self.record.fail_to_fill(pub)
+                # 退出，因为不合要求
+                return
+
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
+            pub['error'] = f'爬取BibTeX时出错 {e}'
+            self.record.fail_to_fill(pub)
+            # 取消任务
+            task_abstract.cancel()
+            return
+
+        # 成功结束
+        self.record.success_fill(pub)
+
+    async def _fill_abstract(self, page_url, pub):
         if await self.crawl.is_page_pdf(page_url):
-            self.logger.error(f'直接爬取摘要失败，网页是pdf')
-            return False
+            raise self.crawl.PageIsPdfError()
 
         title = pub['title']
+        cut = pub['cut']
         page = await self.crawl.browser.get(page_url, new_tab=True)
         try:
             await page.wait(2)
             text = title[:20]  # 检查存在
             html_str = await wait_for_text(text, page, timeout=30)
         except asyncio.TimeoutError as e:
-            self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
-            return False
+            raise e
         finally:
             await page.close()
 
         gpt = GptDoPageText(self.logger)
         try:
             # 访问GPT，提取结果
-            pub['abstract'] = await gpt.get_abstract(pub['cut'], html_str)
-            self.logger.info(f'直接爬取到摘要 {page_url}')
+            pub['abstract'] = await gpt.get_abstract(cut, html_str)
         except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+            raise
+
+    async def fill_abstract(self, pub):
+        page_url = pub['url']
+        try:
+            await self._fill_abstract(page_url, pub)
+        except self.crawl.PageIsPdfError as e:
+            self.logger.error(f'直接爬取摘要失败，网页是pdf')
+            return False
+        except asyncio.TimeoutError as e:
+            self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
+            return False
+        except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
             self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
             return False
 
         return True
+
+    async def fill_abstract_2(self, pub):
+        prime_url = pub['url']
+        version_link = pub['version_link']
+        if not version_link:
+            self.logger.error(f'爬取摘要失败，缺少其他版本链接')
+            return False
+
+        # 获取其他版本链接
+        version_urls = await get_version_urls(version_link)
+        for url in version_urls:
+            if url == prime_url:  # 已经尝试过了
+                continue
+
+            try:
+                await self._fill_abstract(url, pub)
+                return True
+            except self.crawl.PageIsPdfError as e:
+                self.logger.error(f'爬取摘要失败，网页是pdf {url}')
+            except asyncio.TimeoutError as e:
+                self.logger.error(f'爬取摘要失败 {e} {url}')
+            except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
+                self.logger.error(f'爬取摘要失败 {e} {url}')
+
+        return False
