@@ -60,7 +60,7 @@ def use_proxy():
     # 配置代理
     pg = ProxyGenerator()
     succeed = pg.SingleProxy(api_config.ipfoxy_proxy_auth)
-    logger.debug(f'SingleProxy设置succeed = {succeed}')
+    logger.debug(f'设置 scholarly IP代理 {"succeed" if succeed else "failed"}')
     if not succeed:
         return False
 
@@ -175,6 +175,7 @@ async def get_version_urls(version_link):
     except asyncio.CancelledError:
         raise
     except Exception as e:
+        logger.debug(traceback.format_exc(chain=False))
         raise QueryScholarlyError(e)
 
     # 解析页面

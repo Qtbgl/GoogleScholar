@@ -101,6 +101,7 @@ class Runner1:
 
         # 成功结束
         self.record.success_fill(pub)
+        self.logger.debug(f'成功爬取文献信息 {pub["url"]}')
 
     async def _fill_abstract(self, page_url, pub):
         if await self.crawl.is_page_pdf(page_url):
@@ -151,8 +152,9 @@ class Runner1:
         # 获取其他版本链接
         try:
             version_urls = await get_version_urls(version_link)
+            self.logger.debug(f'成功获取其他版本 {prime_url}')
         except QueryScholarlyError as e:
-            self.logger.error(f'爬取摘要失败 获取其他版本出错 {e}')
+            self.logger.error(f'爬取摘要失败 获取其他版本出错 {e} {prime_url}')
             # 不抛出
             return False
 

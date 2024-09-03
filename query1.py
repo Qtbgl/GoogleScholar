@@ -51,7 +51,7 @@ async def query1(
 
     from data import api_config
     if api_config.scholarly_use_proxy:
-        logger.info('准备启用scholarly ip代理')
+        logger.info('准备设置 scholarly ip代理')
         from crawl.by_scholarly import use_proxy
         succeed = use_proxy()
         if not succeed:
@@ -103,9 +103,9 @@ async def query1(
             logger.error(f"Unexpected Error: {type(e)} {e}")
     finally:
         if not task.done():
-            logger.info('Task not done, canceling...')
+            logger.info('---------------------------------------------Task not done, canceling...')
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
-                logger.info("Task was cancelled!")
+                logger.info("---------------------------------------------Task was cancelled!")
