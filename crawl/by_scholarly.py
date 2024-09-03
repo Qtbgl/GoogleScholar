@@ -16,7 +16,7 @@ def alter_scholarly():
     _scholar_pub = getattr(PublicationParser, '_scholar_pub')  # 保存原先方法
 
     def _new_scholar_pub(self, __data, publication: Publication):
-        logger.info(f'succeed to hijack {self}._scholar_pub')
+        # logger.info(f'succeed to hijack {self}._scholar_pub')
         # 调用原有函数
         publication = _scholar_pub(self, __data, publication)
         # 补充数据
@@ -84,6 +84,7 @@ class ByScholarly:
             'num_citations': pub['num_citations'],
             'eprint_url': pub.get('eprint_url'),
             'raw_pub': pub,
+            'version_link': pub.get('version_link'),
         }
 
     async def fill_bibtex(self, pub):
@@ -169,7 +170,12 @@ async def get_version_urls(version_link):
     assert isinstance(nav, Navigator)
 
     # 借用nav对象方法，用代理爬取谷歌页面
-    html = await asyncio.to_thread(nav._get_page, version_link, True)
+    try:
+        html = await asyncio.to_thread(nav._get_page, version_link, True)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        raise QueryScholarlyError(e)
 
     # 解析页面
     html = html.replace(u'\xa0', u' ')

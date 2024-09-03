@@ -51,12 +51,10 @@ class Runner1:
         if min_cite is not None and min_cite > 0:
             num_citations = pub.get('num_citations')
             if num_citations is None:
-                pub['error'] = f'无引用数量信息'
-                self.record.fail_to_fill(pub)
+                self.record.fail_to_fill(pub, f'无引用数量信息')
                 return
             elif num_citations < min_cite:
-                pub['error'] = f'引用数量不足 {pub["num_citations"]} < {min_cite}'
-                self.record.fail_to_fill(pub)
+                self.record.fail_to_fill(pub, f'引用数量不足 {pub["num_citations"]} < {min_cite}')
                 return
 
         # 异步执行两个任务
@@ -78,8 +76,7 @@ class Runner1:
         except Exception as e:
             # 所有异常不抛出
             self.logger.error(traceback.format_exc())
-            pub['error'] = f'爬取摘要时出错 {e}'
-            self.record.fail_to_fill(pub)
+            self.record.fail_to_fill(pub, f'爬取摘要时出错 {e}')
             # 取消任务
             task_abstract.cancel()
             # 结束退出，因为是未预料的异常
@@ -89,8 +86,7 @@ class Runner1:
             # 等待bib异步任务结束
             succeed = await task_bibtex
             if not succeed:
-                pub['error'] = 'BibTeX未正常获取'
-                self.record.fail_to_fill(pub)
+                self.record.fail_to_fill(pub, 'BibTeX未正常获取')
                 # 退出，因为不合要求
                 return
 
@@ -98,8 +94,7 @@ class Runner1:
             raise
         except Exception as e:
             self.logger.error(traceback.format_exc())
-            pub['error'] = f'爬取BibTeX时出错 {e}'
-            self.record.fail_to_fill(pub)
+            self.record.fail_to_fill(pub, f'爬取BibTeX时出错 {e}')
             # 取消任务
             task_abstract.cancel()
             return
@@ -154,7 +149,13 @@ class Runner1:
             return False
 
         # 获取其他版本链接
-        version_urls = await get_version_urls(version_link)
+        try:
+            version_urls = await get_version_urls(version_link)
+        except QueryScholarlyError as e:
+            self.logger.error(f'爬取摘要失败，无法获取其他版本 {e}')
+            # 不抛出
+            return False
+
         for url in version_urls:
             if url == prime_url:  # 已经尝试过了
                 continue

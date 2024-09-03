@@ -12,7 +12,8 @@ class Record1(Conn):
     def set_pages(self, pages):
         self.pages = pages
 
-    def fail_to_fill(self, pub):
+    def fail_to_fill(self, pub, error):
+        pub['error'] = error
         self.fail_pubs.append(pub)
 
     def success_fill(self, pub):
