@@ -128,7 +128,10 @@ class Runner1:
         page = await self.crawl.browser.get(page_url, new_tab=True)
         try:
             await page.wait(2)
-            await page.wait_for(text=title, timeout=30)  # test 确保标签出现
+            await page.wait_for(text=title, timeout=30)  # 确保标签出现
+            await page.scroll_down(100)  # 确保内容加载
+            await page
+
             html_str = await page.get_content()
 
             gpt = GptDoPageText(self.logger)

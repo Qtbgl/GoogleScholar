@@ -19,7 +19,7 @@ class AskGpt:
         except Exception as e:
             raise self.GPTQueryError(f'访问GPT出错 {e}')
 
-        if '抱歉' in ans or "I'm sorry" in ans:
-            raise self.GPTAnswerError('GPT回答有误, answer:' + ans)
+        if '抱歉' in ans or "I'm sorry" in ans or "I'm unable" in ans:
+            raise self.GPTAnswerError('GPT回答有误 ' + ans)
 
         return ans
