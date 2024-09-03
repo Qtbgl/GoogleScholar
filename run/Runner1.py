@@ -6,7 +6,7 @@ from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
 from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError, get_version_urls, fill_bibtex
 from crawl.by_nodiver import Crawl
-from tools.nodriver_tools import wait_for_text
+from tools.nodriver_tools import wait_to_complete
 
 
 class Runner1:
@@ -108,7 +108,7 @@ class Runner1:
         succeed = False
         for i in range(3):
             try:
-                await fill_bibtex(pub)
+                await asyncio.wait_for(fill_bibtex(pub), timeout=90)  # debug 防止一直等下去
                 succeed = True
                 break
             except asyncio.CancelledError:
@@ -129,8 +129,8 @@ class Runner1:
         try:
             await page.wait(2)
             await page.wait_for(text=title, timeout=30)  # 确保标签出现
-            await page.scroll_down(100)  # 确保内容加载
-            await page
+            if not await wait_to_complete(page, 30):
+                self.logger.debug(f'网页未等待加载完成 {page_url}')
 
             html_str = await page.get_content()
 
