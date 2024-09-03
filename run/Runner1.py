@@ -1,5 +1,6 @@
 import asyncio
 import traceback
+import urllib.parse
 
 from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
@@ -129,19 +130,23 @@ class Runner1:
             await page.wait(2)
             await page.wait_for(text=title, timeout=30)  # test 确保标签出现
             html_str = await page.get_content()
-        except asyncio.TimeoutError as e:
-            path = await page.save_screenshot()
-            self.logger.debug(f'已保存等待失败网页截图 {path}')
-            raise e
-        finally:
-            await page.close()
 
-        gpt = GptDoPageText(self.logger)
-        try:
+            gpt = GptDoPageText(self.logger)
             # 访问GPT，提取结果
             pub['abstract'] = await gpt.get_abstract(cut, html_str)
-        except (gpt.GPTQueryError, gpt.GPTAnswerError) as e:
+
+        except asyncio.TimeoutError as e:
+            parsed = urllib.parse.urlparse(page_url)
+            path = await page.save_screenshot(f'{parsed.hostname}.png')
+            self.logger.debug(f'已保存网页截图 {path} {page_url}')
+            raise e
+        except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
+            parsed = urllib.parse.urlparse(page_url)
+            path = await page.save_screenshot(f'{parsed.hostname}.png')
+            self.logger.debug(f'已保存网页截图 {path} {page_url}')
             raise
+        finally:
+            await page.close()
 
     async def fill_abstract(self, pub):
         page_url = pub['url']
