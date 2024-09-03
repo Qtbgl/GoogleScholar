@@ -127,9 +127,11 @@ class Runner1:
         page = await self.crawl.browser.get(page_url, new_tab=True)
         try:
             await page.wait(2)
-            text = title[:20]  # 检查存在
-            html_str = await wait_for_text(text, page, timeout=30)
+            await page.wait_for(text=title, timeout=30)  # test 确保标签出现
+            html_str = await page.get_content()
         except asyncio.TimeoutError as e:
+            path = await page.save_screenshot()
+            self.logger.debug(f'已保存等待失败网页截图 {path}')
             raise e
         finally:
             await page.close()
