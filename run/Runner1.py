@@ -130,7 +130,7 @@ class Runner1:
         try:
             await self._fill_abstract(page_url, pub)
         except self.crawl.PageIsPdfError as e:
-            self.logger.error(f'直接爬取摘要失败，网页是pdf')
+            self.logger.error(f'直接爬取摘要失败 网页是pdf {page_url}')
             return False
         except asyncio.TimeoutError as e:
             self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
@@ -145,14 +145,14 @@ class Runner1:
         prime_url = pub['url']
         version_link = pub['version_link']
         if not version_link:
-            self.logger.error(f'爬取摘要失败，缺少其他版本链接')
+            self.logger.error(f'爬取摘要失败 文献缺少其他版本 {prime_url}')
             return False
 
         # 获取其他版本链接
         try:
             version_urls = await get_version_urls(version_link)
         except QueryScholarlyError as e:
-            self.logger.error(f'爬取摘要失败，无法获取其他版本 {e}')
+            self.logger.error(f'爬取摘要失败 获取其他版本出错 {e}')
             # 不抛出
             return False
 
@@ -164,7 +164,7 @@ class Runner1:
                 await self._fill_abstract(url, pub)
                 return True
             except self.crawl.PageIsPdfError as e:
-                self.logger.error(f'爬取摘要失败，网页是pdf {url}')
+                self.logger.error(f'爬取摘要失败 网页是pdf {url}')
             except asyncio.TimeoutError as e:
                 self.logger.error(f'爬取摘要失败 {e} {url}')
             except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
