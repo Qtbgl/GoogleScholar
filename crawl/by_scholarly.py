@@ -87,28 +87,6 @@ class ByScholarly:
             'version_link': pub.get('version_link'),
         }
 
-    async def fill_bibtex(self, pub):
-        pub['BibTeX'] = {'link': None, 'string': None}
-
-        # 通过原始pub对象获取
-        raw_pub = pub['raw_pub']
-        if 'url_scholarbib' in raw_pub:
-            pub['BibTeX']['link'] = 'https://scholar.google.com' + raw_pub['url_scholarbib']
-        else:
-            pub['BibTeX']['link'] = None
-
-        for i in range(3):
-            try:
-                bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
-                pub['BibTeX']['string'] = bib_str
-                return True
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                self.logger.error(f'scholarly.bibtex失败, 次数{i+1} {e}')
-
-        return False
-
     async def query_scholar(self, item: QueryItem):
         """
         :return: 一次生成最多10篇文章
@@ -162,6 +140,18 @@ class SearchPubsAsync:
         return value
 
 
+async def fill_bibtex(pub):
+    pub['BibTeX'] = {'link': None, 'string': None}
+
+    # 通过原始pub对象获取
+    raw_pub = pub['raw_pub']
+    if 'url_scholarbib' in raw_pub:
+        pub['BibTeX']['link'] = 'https://scholar.google.com' + raw_pub['url_scholarbib']
+
+    bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
+    pub['BibTeX']['string'] = bib_str
+
+
 async def get_version_urls(version_link):
     # 依赖于scholarly
     nav = getattr(scholarly, '_Scholarly__nav')
@@ -175,7 +165,7 @@ async def get_version_urls(version_link):
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        logger.debug(traceback.format_exc(chain=False))
+        # logger.debug(traceback.format_exc(chain=False))
         raise QueryScholarlyError(e)
 
     # 解析页面

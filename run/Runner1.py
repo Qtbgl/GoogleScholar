@@ -3,7 +3,7 @@ import traceback
 
 from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
-from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError, get_version_urls
+from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError, get_version_urls, fill_bibtex
 from crawl.by_nodiver import Crawl
 from tools.nodriver_tools import wait_for_text
 
@@ -59,14 +59,14 @@ class Runner1:
 
         # 异步执行两个任务
         task_abstract = asyncio.create_task(self.fill_abstract(pub))
-        task_bibtex = asyncio.create_task(self.source.fill_bibtex(pub))
+        task_bibtex = asyncio.create_task(self.fill_bibtex(pub))
         try:
             succeed = await task_abstract
-            if not succeed:
-                # 再次尝试
-                task_abstract = asyncio.create_task(self.fill_abstract_2(pub))
-
-            succeed = await task_abstract
+            # if not succeed:
+            #     # 再次尝试
+            #     task_abstract = asyncio.create_task(self.fill_abstract_2(pub))
+            #
+            # succeed = await task_abstract
             if not succeed:
                 # 只记录为空，不退出
                 pub['abstract'] = None
@@ -101,7 +101,22 @@ class Runner1:
 
         # 成功结束
         self.record.success_fill(pub)
-        self.logger.debug(f'成功爬取文献信息 {pub["url"]}')
+        self.logger.debug(f'退出文献信息任务 {pub["url"]}')
+
+    async def fill_bibtex(self, pub):
+        succeed = False
+        for i in range(3):
+            try:
+                await fill_bibtex(pub)
+                succeed = True
+                break
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.logger.error(f'scholarly.bibtex失败 {e} {pub["url"]}')
+
+        self.logger.debug(f'退出bibtex任务 {pub["url"]}')
+        return succeed
 
     async def _fill_abstract(self, page_url, pub):
         if await self.crawl.is_page_pdf(page_url):
@@ -140,6 +155,7 @@ class Runner1:
             self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
             return False
 
+        self.logger.debug(f'退出摘要任务 {page_url}')
         return True
 
     async def fill_abstract_2(self, pub):
