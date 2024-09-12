@@ -92,7 +92,7 @@ async def query1(
             result['error'] = str(e)
         finally:
             # 返回任务执行结果
-            result['data'] = record.deliver_pubs()
+            result['data'] = record.deliver_pubs(item)
             await goodbye(msg_obj=result)
 
     except WebSocketDisconnect as e:

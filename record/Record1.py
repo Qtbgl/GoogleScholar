@@ -43,7 +43,8 @@ class Record1(Conn):
             obj = {
                 'title': pub['title'],
                 'author': pub['author'],
-                'pub_url': pub['pub_url'],
+                'pub_year': pub['pub_year'],
+                'pub_url': pub['url'],
                 'abstract': abstract,
                 'eprint_url': pub.get('eprint_url'),
                 'num_citations': pub.get('num_citations', None),

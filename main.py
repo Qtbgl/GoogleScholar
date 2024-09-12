@@ -1,6 +1,6 @@
 from context import app
 from query1 import query1
-from query2 import query2
+# from query2 import query2
 
 
 @app.get("/")

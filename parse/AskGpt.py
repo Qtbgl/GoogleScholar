@@ -16,7 +16,7 @@ class AskGpt:
 
     async def ask_gpt(self, query_txt):
         try:
-            logger.debug(f'ask_gpt_async 的 timeout 为 {self.timeout}')
+            # logger.debug(f'ask_gpt_async 的 timeout 为 {self.timeout}')
             ans = await ask_gpt_async(query_txt, self.timeout)
         except asyncio.CancelledError:
             raise

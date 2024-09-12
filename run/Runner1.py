@@ -31,7 +31,7 @@ class Runner1:
             async for pubs in self.source.query_scholar(item):
                 # 爬取网页
                 self.logger.info(f'准备异步爬取pubs {len(pubs)}')
-                tasks = [self.fill_pub(pub, item) for pub in pubs]
+                tasks = [self._fill_pub(pub, item) for pub in pubs]
                 await asyncio.gather(*tasks)  # 异步浏览器爬取
 
         except asyncio.CancelledError as e:
@@ -108,7 +108,13 @@ class Runner1:
 
         # 成功结束
         self.record.success_fill(pub)
-        self.logger.debug(f'退出文献信息任务 {pub["url"]}')
+
+    async def _fill_pub(self, pub, item):
+        self.logger.debug(f'进入文献信息任务 {pub["url"]}')
+        try:
+            await self.fill_pub(pub, item)
+        finally:
+            self.logger.debug(f'退出文献信息任务 {pub["url"]}')
 
     async def fill_bibtex(self, pub):
         """
@@ -124,7 +130,7 @@ class Runner1:
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                self.logger.error(f'scholarly.bibtex失败 {e} {pub["url"]}')
+                self.logger.error(f'bibtex获取时出错 {type(e)} {e}')
 
         self.logger.debug(f'退出bibtex任务 {pub["url"]}')
         return succeed
@@ -156,12 +162,12 @@ class Runner1:
         except asyncio.TimeoutError as e:
             parsed = urllib.parse.urlparse(page_url)
             path = await page.save_screenshot(f'{parsed.hostname}.png')
-            self.logger.debug(f'已保存网页截图 {path} {page_url}')
+            self.logger.debug(f'失败网页截图 {path}')
             raise e
         except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
             parsed = urllib.parse.urlparse(page_url)
             path = await page.save_screenshot(f'{parsed.hostname}.png')
-            self.logger.debug(f'已保存网页截图 {path} {page_url}')
+            self.logger.debug(f'失败网页截图 {path}')
             raise
         finally:
             await page.close()
@@ -171,16 +177,16 @@ class Runner1:
         try:
             await self._fill_abstract(page_url, pub)
         except self.crawl.PageIsPdfError as e:
-            self.logger.error(f'直接爬取摘要失败 网页是pdf {page_url}')
+            self.logger.error(f'摘要任务失败 网页是pdf {page_url}')
             return False
         except asyncio.TimeoutError as e:
-            self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
+            self.logger.error(f'摘要任务失败 {e} {page_url}')
             return False
         except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
-            self.logger.error(f'直接爬取摘要失败 {e} {page_url}')
+            self.logger.error(f'摘要任务失败 {e} {page_url}')
             return False
 
-        self.logger.debug(f'退出摘要任务 {page_url}')
+        self.logger.debug(f'摘要任务成功 {page_url}')
         return True
 
     async def fill_abstract_2(self, pub):

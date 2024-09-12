@@ -83,6 +83,7 @@ class ByScholarly:
             'url': pub['pub_url'],
             'author': author,
             'title': pub['bib']['title'],
+            'pub_year': pub['bib']['pub_year'],
             'num_citations': pub['num_citations'],
             'eprint_url': pub.get('eprint_url'),
             'raw_pub': pub,
