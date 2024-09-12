@@ -60,7 +60,11 @@ class Runner1:
 
         # 异步执行两个任务
         task_abstract = asyncio.create_task(self.fill_abstract(pub))
-        task_bibtex = asyncio.create_task(self.fill_bibtex(pub))
+        if item.ignore_bibtex:
+            task_bibtex = None
+        else:
+            task_bibtex = asyncio.create_task(self.fill_bibtex(pub))
+
         try:
             succeed = await task_abstract
             # if not succeed:
@@ -69,8 +73,9 @@ class Runner1:
             #
             # succeed = await task_abstract
             if not succeed:
-                # 只记录为空，不退出
                 pub['abstract'] = None
+                self.record.fail_to_fill(pub, f'摘要爬取失败')
+                return
 
         except asyncio.CancelledError:
             raise
@@ -83,32 +88,37 @@ class Runner1:
             # 结束退出，因为是未预料的异常
             return
 
-        try:
-            # 等待bib异步任务结束
-            succeed = await task_bibtex
-            if not succeed:
-                self.record.fail_to_fill(pub, 'BibTeX未正常获取')
-                # 退出，因为不合要求
-                return
+        # 等待bib异步任务结束
+        if task_bibtex is not None:
+            try:
+                succeed = await task_bibtex
+                if not succeed:
+                    self.record.fail_to_fill(pub, 'BibTeX未正常获取')
+                    # 退出，因为不合要求
+                    return
 
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            self.logger.error(traceback.format_exc())
-            self.record.fail_to_fill(pub, f'爬取BibTeX时出错 {e}')
-            # 取消任务
-            task_abstract.cancel()
-            return
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.logger.error(traceback.format_exc())
+                self.record.fail_to_fill(pub, f'爬取BibTeX时出错 {e}')
+                # 取消任务
+                task_abstract.cancel()
+                return
 
         # 成功结束
         self.record.success_fill(pub)
         self.logger.debug(f'退出文献信息任务 {pub["url"]}')
 
     async def fill_bibtex(self, pub):
+        """
+        scholarly每次爬取时间: 不超过60s
+        总时间: 不超过2min
+        """
         succeed = False
-        for i in range(3):
+        for i in range(2):
             try:
-                await asyncio.wait_for(fill_bibtex(pub), timeout=90)  # debug 防止一直等下去
+                await asyncio.wait_for(fill_bibtex(pub), timeout=60)  # debug 防止一直等下去
                 succeed = True
                 break
             except asyncio.CancelledError:
@@ -120,6 +130,11 @@ class Runner1:
         return succeed
 
     async def _fill_abstract(self, page_url, pub):
+        """
+        等待时间: 固定2s + 标题出现不超过30s + 网页加载完毕不超过30s
+        GPT询问时间: 不超过60s
+        总时间: (等待时间 + GPT询问时间) 不超过2min
+        """
         if await self.crawl.is_page_pdf(page_url):
             raise self.crawl.PageIsPdfError()
 
@@ -134,7 +149,7 @@ class Runner1:
 
             html_str = await page.get_content()
 
-            gpt = GptDoPageText(self.logger)
+            gpt = GptDoPageText(timeout=60)
             # 访问GPT，提取结果
             pub['abstract'] = await gpt.get_abstract(cut, html_str)
 

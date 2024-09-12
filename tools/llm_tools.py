@@ -5,7 +5,7 @@ openai.api_base = "https://opus.gptuu.com/v1"
 openai.api_key = "sk-4F6yLy8eZ8Bz4DkdEe8b94Ff4e1444Dc87E636A4712aAd7f"
 
 
-async def ask_gpt_async(query):
+async def ask_gpt_async(query, timeout):
     messages = [
         {"role": "user", "content": query},
     ]
@@ -16,6 +16,7 @@ async def ask_gpt_async(query):
         n=1,
         stop=None,
         temperature=0.5,
+        timeout=timeout,
     )
     return response.choices[0].message.content
 

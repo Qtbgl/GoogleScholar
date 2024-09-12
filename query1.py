@@ -25,6 +25,7 @@ async def query1(
 
         from tools.param_tools import Params, check_key
         check_key(obj)
+        ignore_bibtex = bool(obj.get("ignore_bibtex", False))
 
         from crawl.by_scholarly import QueryItem
         p = Params(obj)
@@ -34,6 +35,7 @@ async def query1(
             year_low=p.year_low,
             year_high=p.year_high,
             min_cite=p.min_cite,
+            ignore_bibtex=ignore_bibtex,
         )
     except Exception as e:
         await goodbye({"error": f"api参数异常 {e}"})

@@ -13,7 +13,11 @@ class Record1(Conn):
         self.pages = pages
 
     def fail_to_fill(self, pub, error):
-        pub['error'] = error
+        if pub.get('error'):
+            pub['error'] = (error, pub['error'])  # 嵌套链接
+        else:
+            pub['error'] = error
+
         self.fail_pubs.append(pub)
 
     def success_fill(self, pub):

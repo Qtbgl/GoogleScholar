@@ -22,8 +22,8 @@ def extract_text(root):
 
 
 class GptDoPageText(AskGpt):
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, timeout=None):
+        super().__init__(timeout)
 
     async def get_abstract(self, cut, html_str):
         root = BeautifulSoup(html_str, 'html.parser')

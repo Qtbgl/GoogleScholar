@@ -1,9 +1,12 @@
 import asyncio
 
 from tools.llm_tools import ask_gpt_async
+from log_config import logger
 
 
 class AskGpt:
+    def __init__(self, timeout=None):
+        self.timeout = timeout
 
     class GPTQueryError(Exception):
         pass
@@ -13,7 +16,8 @@ class AskGpt:
 
     async def ask_gpt(self, query_txt):
         try:
-            ans = await ask_gpt_async(query_txt)
+            logger.debug(f'ask_gpt_async 的 timeout 为 {self.timeout}')
+            ans = await ask_gpt_async(query_txt, self.timeout)
         except asyncio.CancelledError:
             raise
         except Exception as e:
