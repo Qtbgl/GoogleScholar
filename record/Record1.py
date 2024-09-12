@@ -1,3 +1,4 @@
+from crawl.by_scholarly import QueryItem, get_bib_link
 from record.Conn import Conn
 from tools.bib_tools import add_abstract, del_abstract
 
@@ -31,7 +32,7 @@ class Record1(Conn):
         done = len(self.filled_pubs) + len(self.fail_pubs)
         return done / total
 
-    def deliver_pubs(self):
+    def deliver_pubs(self, item: QueryItem):
         all_pubs = self.filled_pubs + self.fail_pubs
         # 缺省值
         empty_bib = {'link': None, 'string': None}
@@ -39,29 +40,34 @@ class Record1(Conn):
         # 所有已有的结果
         for pub in all_pubs:
             abstract = pub.get('abstract')
-            bib_link = pub.get('BibTeX', empty_bib).get('link')
-            bib_raw = pub.get('BibTeX', empty_bib).get('string')
-            bib_str = None
-            # bib加入摘要
-            if bib_raw:
-                if abstract is None:
-                    bib_str = del_abstract(bib_raw)
-                else:
-                    bib_str = add_abstract(bib_raw, abstract)
-
-            item = {
-                'abstract': abstract,
-                'pub_url': pub['url'],
+            obj = {
                 'title': pub['title'],
                 'author': pub['author'],
-                'num_citations': pub.get('num_citations', None),
+                'pub_url': pub['pub_url'],
+                'abstract': abstract,
                 'eprint_url': pub.get('eprint_url'),
-                'bib_link': bib_link,
-                'bib_raw': bib_raw,
-                'bib': bib_str,
-                'error': pub.get('error'),
+                'num_citations': pub.get('num_citations', None),
             }
-            results.append(item)
+            # 加入bib
+            if item.ignore_bibtex:
+                obj['bib_link'] = get_bib_link(pub['raw_pub'])  # 为以后添加
+            else:
+                bib_link = pub.get('BibTeX', empty_bib).get('link')
+                bib_raw = pub.get('BibTeX', empty_bib).get('string')
+                # bib加入摘要
+                if bib_raw and abstract:
+                    bib_str = add_abstract(bib_raw, abstract)
+                elif bib_raw and not abstract:
+                    bib_str = del_abstract(bib_raw)
+                else:
+                    bib_str = None
+
+                obj['bib_link'] = bib_link
+                obj['bib_raw'] = bib_raw
+                obj['bib'] = bib_str
+
+            obj['error'] = pub.get('error')
+            results.append(obj)
 
         # 所有已有的结果
         return results

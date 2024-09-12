@@ -142,13 +142,18 @@ class SearchPubsAsync:
         return value
 
 
+def get_bib_link(raw_pub):
+    if 'url_scholarbib' in raw_pub:
+        return 'https://scholar.google.com' + raw_pub['url_scholarbib']
+    return None
+
+
 async def fill_bibtex(pub):
     pub['BibTeX'] = {'link': None, 'string': None}
 
     # 通过原始pub对象获取
     raw_pub = pub['raw_pub']
-    if 'url_scholarbib' in raw_pub:
-        pub['BibTeX']['link'] = 'https://scholar.google.com' + raw_pub['url_scholarbib']
+    pub['BibTeX']['link'] = get_bib_link(raw_pub)
 
     bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
     pub['BibTeX']['string'] = bib_str
