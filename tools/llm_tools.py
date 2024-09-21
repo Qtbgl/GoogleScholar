@@ -1,8 +1,9 @@
 # openai == 0.27.6
 import openai
+from data import api_config
 
-openai.api_base = "https://opus.gptuu.com/v1"
-openai.api_key = "sk-4F6yLy8eZ8Bz4DkdEe8b94Ff4e1444Dc87E636A4712aAd7f"
+openai.api_base = api_config.openai_api_base
+openai.api_key = api_config.openai_api_key
 
 
 async def ask_gpt_async(query, timeout):
