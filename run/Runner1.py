@@ -6,7 +6,7 @@ from parse.gpt_do_page_text import GptDoPageText
 from record.Record1 import Record1
 from crawl.by_scholarly import ByScholarly, QueryItem, QueryScholarlyError, get_version_urls, fill_bibtex
 from crawl.by_nodiver import Crawl
-from tools.nodriver_tools import wait_to_complete
+from tools.nodriver_tools import wait_to_complete, SearchTitleOnPage, wait_for_text
 
 
 class Runner1:
@@ -149,7 +149,9 @@ class Runner1:
         page = await self.crawl.browser.get(page_url, new_tab=True)
         try:
             await page.wait(2)
-            await page.wait_for(text=title, timeout=30)  # 确保标签出现
+            # 确保标签出现
+            await wait_for_text(page, SearchTitleOnPage(title), timeout=30)
+
             if not await wait_to_complete(page, 30):
                 self.logger.debug(f'网页未等待加载完成 {page_url}')
 
