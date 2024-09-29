@@ -1,10 +1,7 @@
-import asyncio
-import json
-import traceback
 from fastapi import Path, WebSocket
 from starlette.websockets import WebSocketDisconnect
 
-from context import app
+from api_tool import app
 
 
 @app.websocket("/query1/{name}")
@@ -13,65 +10,74 @@ async def query1(
     name: str = Path(..., title="terms to be searched"),
 ):
     await websocket.accept()
+    obj = await websocket.receive_json()
+
+    import asyncio
+    import traceback
+    from app.params_tool import check_key, get_int, get_bool, ParamError, param_check
 
     async def goodbye(msg_obj: dict):
-        await websocket.send_text(json.dumps(msg_obj))
+        await websocket.send_json(msg_obj)
         await websocket.close()  # 关闭连接
 
-    # 解析api参数
-    try:
-        data = await websocket.receive_text()
-        obj = json.loads(data)
-
-        from tools.param_tools import Params, check_key
+    @param_check
+    def parse_params():
         check_key(obj)
-        ignore_bibtex = bool(obj.get("ignore_bibtex", False))
+        item = QueryItem()
+        item.name = name
+        item.pages = get_int(obj, 'pages', a=1, default=1)
+        item.year_low = get_int(obj, 'year_low', a=1900, b=2024)
+        item.year_high = get_int(obj, 'year_high', a=1900, b=2024)
+        item.min_cite = get_int(obj, 'min_cite')
+        item.ignore_bibtex = get_bool(obj, 'ignore_bibtex', default=False)
+        return item
 
-        from crawl.by_scholarly import QueryItem
-        p = Params(obj)
-        item = QueryItem(
-            name=name,
-            pages=p.pages,
-            year_low=p.year_low,
-            year_high=p.year_high,
-            min_cite=p.min_cite,
-            ignore_bibtex=ignore_bibtex,
-        )
-    except Exception as e:
-        await goodbye({"error": f"api参数异常 {e}"})
-        return
-
-    # 创建资源
+    # 构建api参数
     from log_config import logger
     logger.info('query1 new call')
     try:
-        from crawl.by_nodiver import Crawl
-        crawl = await Crawl.create(logger)
+        from run.pipline1 import QueryItem, RunnerConfig
+        config = RunnerConfig()
+        config.logger = logger
+    except Exception as e:
+        logger.error('未知异常 ' + traceback.format_exc())
+        return
+
+    # 解析api参数
+    try:
+        config.item = parse_params()
+    except ParamError as e:
+        await goodbye({"error": f"api参数异常 {e}"})
+        return
+    except Exception as e:
+        logger.error('未知异常 ' + traceback.format_exc())
+        return
+
+    # 创建资源
+    try:
+        from crawl import nodriver_tool
+        config.browser = await nodriver_tool.create(logger)
     except Exception as e:
         await goodbye({'error': f'nodriver启动浏览器出错 {e}'})
         return
 
     from data import api_config
     if api_config.scholarly_use_proxy:
-        logger.info('准备设置 scholarly ip代理')
-        from crawl.by_scholarly import use_proxy
-        succeed = use_proxy()
-        if not succeed:
-            await goodbye({'error': f'scholarly setting Proxy failed'})
+        logger.info('准备设置 scholarly IP代理')
+        try:
+            from crawl import by_scholarly
+            succeed = by_scholarly.use_proxy()
+            logger.debug(f'设置 scholarly IP代理 {"succeed" if succeed else "failed"}')
+            assert succeed
+        except Exception as e:
+            await goodbye({'error': f'scholarly setting Proxy failed {e}'})
             return
 
     try:
-        from record.Record1 import Record1
-        record = Record1(logger)
-    except Exception as e:
-        await goodbye({'error': f'record创建出错 {e}'})
-        return
-
-    try:
         from run.Runner1 import Runner1
-        runner = Runner1(crawl, record, logger)
+        runner = Runner1(config)
         # 创建任务
-        task = asyncio.create_task(runner.run(item))
+        task = asyncio.create_task(runner.finish())
     except Exception as e:
         await goodbye({'error': f'创建任务时出错 {e}'})
         return
@@ -80,8 +86,8 @@ async def query1(
     try:
         while not task.done():
             # 获取进度
-            obj = {'type': 'Heartbeat', 'progress': record.get_progress()}
-            await websocket.send_text(json.dumps(obj))  # 发送心跳消息
+            obj = {'type': 'Heartbeat', 'progress': runner.get_progress()}
+            await websocket.send_json(obj)  # 发送心跳消息
             await asyncio.sleep(5)
 
         try:
@@ -92,7 +98,7 @@ async def query1(
             result['error'] = str(e)
         finally:
             # 返回任务执行结果
-            result['data'] = record.deliver_pubs(item)
+            result['data'] = runner.deliver_pubs()
             await goodbye(msg_obj=result)
 
     except WebSocketDisconnect as e:

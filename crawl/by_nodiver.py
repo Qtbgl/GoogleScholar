@@ -1,10 +1,10 @@
-import os
 import traceback
 
-import nodriver as uc
 import asyncio
 
 from nodriver.core.browser import Browser, Config
+
+from crawl import nodriver_tool
 
 
 class Crawl:
@@ -13,20 +13,7 @@ class Crawl:
         """
         :return: 可能抛出浏览器打开异常
         """
-        config = Config(headless=True)
-        # 创建实例，一般不会报错
-        # 保留实例，以关闭浏览器进程
-        browser = Browser(config)
-        try:
-            await browser.start()
-        except Exception as e1:
-            logger.error('浏览器启动失败' + '\n' + traceback.format_exc())
-            try:
-                stop(browser, logger)
-            except Exception as e2:
-                logger.error('浏览器关闭进程时出错' + '\n' + traceback.format_exc())
-            finally:
-                raise e1  # 只抛出第一个异常
+        browser = await nodriver_tool.create(logger)
 
         return cls(logger, browser)
 
@@ -103,52 +90,3 @@ class Crawl:
         except Exception as e:
             self.logger.info(traceback.format_exc())
             raise e  # 再次抛出，不影响原异常
-
-
-def stop(browser, logger):
-    """
-    :param browser: 关闭浏览器进程，代码复制于nodriver
-    :param logger:
-    :return:
-    """
-    self = browser
-    assert isinstance(self._process, asyncio.subprocess.Process), '浏览器进程不存在'
-    logger.info('进入自定义函数，开始关闭进程')
-    for _ in range(3):
-        try:
-            self._process.terminate()
-            logger.info(
-                "terminated browser with pid %d successfully" % self._process.pid
-            )
-            break
-        except (Exception,):
-            try:
-                self._process.kill()
-                logger.info(
-                    "killed browser with pid %d successfully" % self._process.pid
-                )
-                break
-            except (Exception,):
-                try:
-                    if hasattr(self, "browser_process_pid"):
-                        os.kill(self._process_pid, 15)
-                        logger.info(
-                            "killed browser with pid %d using signal 15 successfully"
-                            % self._process.pid
-                        )
-                        break
-                except (TypeError,):
-                    logger.info("typerror", exc_info=True)
-                    pass
-                except (PermissionError,):
-                    logger.info(
-                        "browser already stopped, or no permission to kill. skip"
-                    )
-                    pass
-                except (ProcessLookupError,):
-                    logger.info("process lookup failure")
-                    pass
-                except (Exception,):
-                    raise
-        self._process = None
-        self._process_pid = None

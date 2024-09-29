@@ -4,7 +4,7 @@ import traceback
 from parse.gpt_do_page_text import GptDoPageText
 from crawl.by_scholarly import fill_bibtex
 from run.pipline1 import RunnerConfig, WriteResult
-from tools.nodriver_tools import wait_to_complete, SearchTitleOnPage, wait_for_text
+from crawl.wait_page_tool import wait_to_complete, SearchTitleOnPage, wait_for_text
 
 
 class QuitAbstract(Exception):

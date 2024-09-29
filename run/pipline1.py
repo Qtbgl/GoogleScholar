@@ -1,4 +1,3 @@
-import loguru
 import nodriver
 
 
@@ -32,7 +31,7 @@ class ReadResult:
 
 class RunnerConfig:
     browser: nodriver.Browser
-    logger: loguru.Logger
+    logger = None
     item: QueryItem
 
 

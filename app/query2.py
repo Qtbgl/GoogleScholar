@@ -4,7 +4,7 @@ import traceback
 from fastapi import Path, WebSocket
 from starlette.websockets import WebSocketDisconnect
 
-from context import app
+from api_tool import app
 
 
 async def goodbye(websocket: WebSocket, msg_obj: dict):
