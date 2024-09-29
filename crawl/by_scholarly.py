@@ -5,64 +5,15 @@ from bs4 import BeautifulSoup
 from scholarly import scholarly, ProxyGenerator, Publication
 
 from data import api_config
-from log_config import logger
 
-
-def alter_scholarly():
-    """
-    只能一次修改，否则方法会无限递归
-    """
-    from scholarly.publication_parser import PublicationParser
-    _scholar_pub = getattr(PublicationParser, '_scholar_pub')  # 保存原先方法
-
-    def _new_scholar_pub(self, __data, publication: Publication):
-        # logger.info(f'succeed to hijack {self}._scholar_pub')
-        # 调用原有函数
-        publication = _scholar_pub(self, __data, publication)
-        # 补充数据
-        databox = __data.find('div', class_='gs_ri')
-        lowerlinks = databox.find('div', class_='gs_fl').find_all('a')
-        for link in lowerlinks:
-            if 'version' in link.text:
-                publication['version_link'] = link['href']
-
-        publication.setdefault('version_link', None)
-        return publication
-
-    # 使用反射修改类的方法
-    setattr(PublicationParser, '_scholar_pub', _new_scholar_pub)
-
-
-# 代码加载时
-if api_config.scholarly_alter_code:
-    alter_scholarly()
-
-
-class QueryItem:
-    name: str
-    pages: int
-    year_low: int
-    year_high: int
-    min_cite: int
-    ignore_bibtex: bool
-
-    def __init__(self, name, pages, year_low=None, year_high=None, min_cite=None, ignore_bibtex=False):
-        self.name = name
-        self.pages = pages
-        self.year_low = year_low
-        self.year_high = year_high
-        self.min_cite = min_cite
-        self.ignore_bibtex = ignore_bibtex
-
-    def __str__(self):
-        return str(self.__dict__)
+from run.pipline1 import QueryItem
 
 
 def use_proxy():
     # 配置代理
     pg = ProxyGenerator()
     succeed = pg.SingleProxy(api_config.ipfoxy_proxy_auth)
-    logger.debug(f'设置 scholarly IP代理 {"succeed" if succeed else "failed"}')
+    # logger.debug(f'设置 scholarly IP代理 {"succeed" if succeed else "failed"}')
     if not succeed:
         return False
 
@@ -71,47 +22,44 @@ def use_proxy():
     return True
 
 
-class ByScholarly:
-    def __init__(self, logger):
-        self.logger = logger
+def parse_pub(json_obj):
+    pub = json_obj
+    author = ', '.join(pub['bib']['author'])
+    return {
+        'cut': pub['bib']['abstract'],
+        'url': pub['pub_url'],
+        'author': author,
+        'title': pub['bib']['title'],
+        'pub_year': pub['bib']['pub_year'],
+        'num_citations': pub['num_citations'],
+        'eprint_url': pub.get('eprint_url'),
+        'raw_pub': pub,
+        'version_link': pub.get('version_link'),
+    }
 
-    def parse_pub(self, json_obj):
-        pub = json_obj
-        author = ', '.join(pub['bib']['author'])
-        return {
-            'cut': pub['bib']['abstract'],
-            'url': pub['pub_url'],
-            'author': author,
-            'title': pub['bib']['title'],
-            'pub_year': pub['bib']['pub_year'],
-            'num_citations': pub['num_citations'],
-            'eprint_url': pub.get('eprint_url'),
-            'raw_pub': pub,
-            'version_link': pub.get('version_link'),
-        }
 
-    async def query_scholar(self, item: QueryItem):
-        """
-        :return: 一次生成最多10篇文章
-        """
-        pages = item.pages
-        # 从第0页开始
-        i = 0
-        pubs = []
-        # 遍历生成器，结束时自动退出
-        async for res in SearchPubsAsync(item):
-            pub = self.parse_pub(res)
-            pubs.append(pub)
-            if len(pubs) == 10:  # 每隔一页
-                full_page = pubs
-                pubs = []  # 重新装载
-                yield full_page
+async def query_scholar(item: QueryItem):
+    """
+    :return: 一次生成最多10篇文章
+    """
+    pages = item.pages
+    # 从第0页开始
+    i = 0
+    pubs = []
+    # 遍历生成器，结束时自动退出
+    async for res in SearchPubsAsync(item):
+        pub = parse_pub(res)
+        pubs.append(pub)
+        if len(pubs) == 10:  # 每隔一页
+            full_page = pubs
+            pubs = []  # 重新装载
+            yield full_page
 
-                i += 1
-                if i >= pages:  # debug
-                    break
+            i += 1
+            if i >= pages:  # debug
+                break
 
-        # 结束生成器
+    # 结束生成器
 
 
 class QueryScholarlyError(Exception):
@@ -135,8 +83,7 @@ class SearchPubsAsync:
         except StopIteration:
             raise StopAsyncIteration  # 异步退出信号
         except Exception as e:
-            logger.error(traceback.format_exc())
-            raise QueryScholarlyError(f'scholarly爬取谷歌异常 {e}')
+            raise QueryScholarlyError(f'scholarly爬取谷歌异常 {traceback.format_exc()}')
 
     async def __anext__(self):
         value = await asyncio.to_thread(self.next_to_anext)
@@ -190,3 +137,33 @@ async def get_version_urls(version_link):
             version_urls.append(url)
 
     return version_urls
+
+
+def alter_scholarly():
+    """
+    只能一次修改，否则方法会无限递归
+    """
+    from scholarly.publication_parser import PublicationParser
+    _scholar_pub = getattr(PublicationParser, '_scholar_pub')  # 保存原先方法
+
+    def _new_scholar_pub(self, __data, publication: Publication):
+        # logger.info(f'succeed to hijack {self}._scholar_pub')
+        # 调用原有函数
+        publication = _scholar_pub(self, __data, publication)
+        # 补充数据
+        databox = __data.find('div', class_='gs_ri')
+        lowerlinks = databox.find('div', class_='gs_fl').find_all('a')
+        for link in lowerlinks:
+            if 'version' in link.text:
+                publication['version_link'] = link['href']
+
+        publication.setdefault('version_link', None)
+        return publication
+
+    # 使用反射修改类的方法
+    setattr(PublicationParser, '_scholar_pub', _new_scholar_pub)
+
+
+# 代码加载时
+if api_config.scholarly_alter_code:
+    alter_scholarly()
