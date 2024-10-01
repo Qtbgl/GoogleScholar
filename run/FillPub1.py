@@ -5,6 +5,7 @@ from parse.gpt_do_page_text import GptDoPageText
 from crawl.by_scholarly import fill_bibtex
 from run.pipline1 import RunnerConfig, WriteResult
 from crawl.wait_page_tool import wait_to_complete, SearchTitleOnPage, wait_for_text
+from tools.error_tools import LoggerAuto
 
 
 class QuitAbstract(Exception):
@@ -44,14 +45,9 @@ class FillPub1:
 
     async def fill_pub(self, pub):
         logger = self.config.logger
-        logger.debug(f'进入文献信息任务 {pub["url"]}')
-        try:
+        pub_url = pub['url']
+        with LoggerAuto(logger, f'文献信息任务 {pub_url}'):
             await self._fill_pub(pub)
-        except asyncio.CancelledError:
-            logger.info(f'取消文献信息任务 {pub["url"]}')
-            raise  # 重新抛出异常以确保任务被标记为取消
-        finally:
-            logger.debug(f'退出文献信息任务 {pub["url"]}')
 
     async def fill_bibtex(self, pub):
         """

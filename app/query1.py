@@ -8,7 +8,7 @@ from crawl import nodriver_tool, by_scholarly
 from run.Runner1 import Runner1
 from data import api_config
 
-from api_tool import app
+from app.api_tool import app
 
 
 @app.websocket("/query1/{name}")
@@ -19,7 +19,7 @@ async def query1(
     await websocket.accept()
 
     from log_config import logger
-    logger.info(f'新连接 {websocket}')
+    logger.info(f'新连接 {websocket.url}')
 
     async def goodbye(msg_obj: dict):
         await websocket.send_json(msg_obj)
@@ -48,9 +48,8 @@ async def initialize_config(name, obj, logger):
 
     try:
         config.item = parse_params(name, obj)
-        config.browser = await nodriver_tool.create(logger)
-        if api_config.scholarly_use_proxy:
-            assert by_scholarly.use_proxy()
+        config.browser = await create_browser(logger)
+        await initialize_scholarly(logger)
     except ParamError as e:
         raise GoodbyeBecauseOfError(f"api参数异常 {e}")
     except InitializeError as e:
@@ -101,41 +100,47 @@ async def initialize_scholarly(logger):
 
 async def handle_tasks(websocket, config):
     """Manage task execution and heartbeat."""
+    logger = config.logger
+    runner = Runner1(config)
+    task = asyncio.create_task(runner.finish())
     try:
-        runner = Runner1(config)
-        task = asyncio.create_task(runner.finish())
-
         while not task.done():
             await websocket.send_json({'type': 'Heartbeat', 'progress': runner.get_progress()})
             await asyncio.sleep(5)
 
         if task.exception():
             await websocket.send_json(
-                {'type': 'Result', 'error': task.exception(), 'data': runner.deliver_pubs()})
+                {'type': 'Result', 'error': str(task.exception()), 'data': runner.deliver_pubs()})
         else:
             await websocket.send_json(
                 {'type': 'Result', 'error': None, 'data': runner.deliver_pubs()})
 
         await websocket.close()
     finally:
-        await cleanup_tasks(config)
+        if not task.done():
+            logger.info('---------------------------------------------Task not done, canceling...')
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                logger.info("---------------------------------------------Task was cancelled!")
 
 
-async def cleanup_tasks(config):
-    """Cancel all pending tasks and clean up resources."""
-    logger = config.logger
-    for task in asyncio.all_tasks():
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(f'cleanup_tasks 吸收异常 {type(e)} {e}')
-
-    browser = config.browser
-    logger.info('准备关闭浏览器')
-    try:
-        browser.stop()  # 标准关闭
-    except Exception as e:
-        logger.info('关闭浏览器异常 ' + traceback.format_exc())
+# async def cleanup_tasks(config):
+#     """Cancel all pending tasks and clean up resources."""
+#     logger = config.logger
+#     for task in asyncio.all_tasks():
+#         task.cancel()
+#         try:
+#             await task
+#         except asyncio.CancelledError:
+#             pass
+#         except Exception as e:
+#             logger.error(f'cleanup_tasks 吸收异常 {type(e)} {e}')
+#
+#     browser = config.browser
+#     logger.info('准备关闭浏览器')
+#     try:
+#         browser.stop()  # 标准关闭
+#     except Exception as e:
+#         logger.info('关闭浏览器异常 ' + traceback.format_exc())

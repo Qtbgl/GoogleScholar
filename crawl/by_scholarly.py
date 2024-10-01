@@ -83,7 +83,7 @@ class SearchPubsAsync:
         except StopIteration:
             raise StopAsyncIteration  # 异步退出信号
         except Exception as e:
-            raise QueryScholarlyError(f'scholarly爬取谷歌异常 {traceback.format_exc()}')
+            raise QueryScholarlyError(e)
 
     async def __anext__(self):
         value = await asyncio.to_thread(self.next_to_anext)

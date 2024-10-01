@@ -33,20 +33,27 @@ class Runner1(ReadResult, WriteResult):
         self.result.set_pages(item.pages)
         dealer = FillPub1(self.config, self)
 
+        tasks = []
         try:
             # for every 10 pubs
             async for pubs in query_scholar(item):
                 # 爬取网页
                 logger.info(f'准备异步爬取pubs {len(pubs)}')
-                tasks = [dealer.fill_pub(pub) for pub in pubs]
+                tasks = [asyncio.create_task(dealer.fill_pub(pub)) for pub in pubs]
                 await asyncio.gather(*tasks)  # 异步浏览器爬取
 
         except QueryScholarlyError as e:
-            logger.error(e)
+            logger.error(f'scholarly异常 {traceback.format_exc()}')
             raise e
         except Exception as e:
+            logger.error(f'未知异常 {e}')
             raise Exception(f'发生异常，中断爬取 {e}')
-
+        finally:
+            # 取消未完成的任务
+            for task in tasks:
+                task.cancel()
+                # 等待所有任务完成取消
+            await asyncio.gather(*tasks, return_exceptions=True)
         # 不返回结果
 
     def get_progress(self):
@@ -59,6 +66,9 @@ class Runner1(ReadResult, WriteResult):
 
     def deliver_pubs(self):
         all_pubs = self.result.filled_pubs + self.result.fail_pubs
+        if len(all_pubs) == 0:
+            return None
+
         item = self.config.item
         # 缺省值
         empty_bib = {'link': None, 'string': None}

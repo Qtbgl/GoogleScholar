@@ -1,3 +1,5 @@
+import typing
+
 import nodriver
 
 
@@ -31,7 +33,7 @@ class ReadResult:
 
 class RunnerConfig:
     browser: nodriver.Browser
-    logger = None
+    logger: typing.Any
     item: QueryItem
 
 

@@ -1,7 +1,5 @@
 import bibtexparser
 
-from log_config import logger
-
 
 def add_abstract(bib_str, abstract):
     try:
@@ -10,8 +8,8 @@ def add_abstract(bib_str, abstract):
         new_str = bibtexparser.dumps(bib_db)
         return new_str
     except Exception as e:
-        logger.error(f'bib解析出错 {e} 原字符串为 {bib_str}')
-        return None
+        raise Exception(f'bib解析出错 {e} 原字符串为 {bib_str}')
+
 
 
 def del_abstract(bib_str):
@@ -24,5 +22,4 @@ def del_abstract(bib_str):
         new_str = bibtexparser.dumps(bib_db)
         return new_str
     except Exception as e:
-        logger.error(f'bib解析出错 {e} 原字符串为 {bib_str}')
-        return None
+        raise Exception(f'bib解析出错 {e} 原字符串为 {bib_str}')

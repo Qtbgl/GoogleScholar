@@ -1,7 +1,6 @@
 import asyncio
 
 from tools.llm_tools import ask_gpt_async
-from log_config import logger
 
 
 class AskGpt:
