@@ -35,6 +35,7 @@ async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
 class FillPubsContext:
     def __init__(self):
         self.config = TaskConfig()
+        self.config.browser = None
 
     def __enter__(self):
         return self
@@ -53,13 +54,13 @@ class FillPubsContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         logger = self.config.logger
-        browser = self.config.browser
-        logger.info('准备关闭浏览器')
-        try:
-            browser.stop()  # 标准关闭
-        except Exception as e:
-            logger.info('关闭浏览器异常 ' + traceback.format_exc())
-            raise e  # 再次抛出，不影响原异常
+        if self.config.browser:
+            logger.info('准备关闭浏览器')
+            try:
+                browser = self.config.browser
+                browser.stop()  # 标准关闭
+            except Exception as e:
+                logger.info('关闭浏览器异常 ' + traceback.format_exc())
 
 
 def get_pubs(obj):

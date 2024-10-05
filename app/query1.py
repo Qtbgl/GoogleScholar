@@ -2,11 +2,8 @@ from fastapi import Path, WebSocket
 from starlette.websockets import WebSocketDisconnect
 import asyncio
 import traceback
-from app.params_tool import check_key, get_int, get_bool, ParamError, param_check
-from run.pipline1 import QueryItem, RunnerConfig
-from crawl import nodriver_tool, by_scholarly
+from run.pipline1 import RunnerContext, GoodbyeBecauseOfError
 from run.Runner1 import Runner1
-from data import api_config
 
 from app.api_tool import app
 
@@ -25,80 +22,20 @@ async def query1(
         await websocket.send_json(msg_obj)
         await websocket.close()
 
-    try:
-        obj = await websocket.receive_json()
-        config = await initialize_config(name, obj, logger)
-        await handle_tasks(websocket, config)
-    except GoodbyeBecauseOfError as e:
-        await goodbye({'error': str(e)})
-    except WebSocketDisconnect as e:
-        logger.error(f"Connection closed {e}")
-    except Exception as e:
-        logger.error(f'query1 吸收异常 {e} ' + traceback.format_exc())
+    with RunnerContext() as context:
+        try:
+            obj = await websocket.receive_json()
+            config = await context.initialize_config(name, obj, logger)
+            await run_task(websocket, config)
+        except GoodbyeBecauseOfError as e:
+            await goodbye({'error': str(e)})
+        except WebSocketDisconnect as e:
+            logger.error(f"Connection closed {e}")
+        except Exception as e:
+            logger.error(f'query1 吸收异常 {e} ' + traceback.format_exc())
 
 
-class GoodbyeBecauseOfError(Exception):
-    pass
-
-
-async def initialize_config(name, obj, logger):
-    """Initialize RunnerConfig and parse parameters."""
-    config = RunnerConfig()
-    config.logger = logger
-
-    try:
-        config.item = parse_params(name, obj)
-        config.browser = await create_browser(logger)
-        await initialize_scholarly(logger)
-    except ParamError as e:
-        raise GoodbyeBecauseOfError(f"api参数异常 {e}")
-    except InitializeError as e:
-        raise GoodbyeBecauseOfError(e)
-
-    return config
-
-
-@param_check
-def parse_params(name, obj):
-    """Parse input parameters from the WebSocket message."""
-    check_key(obj)
-    item = QueryItem()
-    item.name = name
-    item.pages = get_int(obj, 'pages', a=1, default=1)
-    item.year_low = get_int(obj, 'year_low', a=1900, b=2024)
-    item.year_high = get_int(obj, 'year_high', a=1900, b=2024)
-    item.min_cite = get_int(obj, 'min_cite')
-    item.ignore_bibtex = get_bool(obj, 'ignore_bibtex', default=False)
-    return item
-
-
-class InitializeError(Exception):
-    pass
-
-
-async def create_browser(logger):
-    try:
-        browser = await nodriver_tool.create(logger)
-    except Exception as e:
-        logger.error(e)
-        raise InitializeError(f'nodriver启动浏览器出错 {e}')
-    return browser
-
-
-async def initialize_scholarly(logger):
-    if not api_config.scholarly_use_proxy:
-        return
-
-    logger.info('准备设置 scholarly IP代理')
-    try:
-        succeed = by_scholarly.use_proxy()
-        logger.debug(f'设置 scholarly IP代理 {"succeed" if succeed else "failed"}')
-        assert succeed
-    except Exception as e:
-        raise InitializeError(f'设置 scholarly IP代理出错 {e}')
-
-
-async def handle_tasks(websocket, config):
+async def run_task(websocket, config):
     """Manage task execution and heartbeat."""
     logger = config.logger
     runner = Runner1(config)
@@ -108,6 +45,7 @@ async def handle_tasks(websocket, config):
             await websocket.send_json({'type': 'Heartbeat', 'progress': runner.get_progress()})
             await asyncio.sleep(5)
 
+        # task因为异常而结束时
         if task.exception():
             await websocket.send_json(
                 {'type': 'Result', 'error': str(task.exception()), 'data': runner.deliver_pubs()})
