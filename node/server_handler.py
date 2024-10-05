@@ -1,3 +1,5 @@
+import traceback
+
 import websockets
 import json
 
@@ -8,28 +10,56 @@ from node.node_pipline import TaskConfig, ErrorToTell
 
 async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
     logger.info("已连接")
-    try:
-        logger.info("开始创建资源")
-        config = await initialize_config(logger)
-        filler = FillPubsAbstract(config)
+    with FillPubsContext() as context:
+        try:
+            logger.info("开始创建任务资源")
+            filler = await context.create(logger)
+            async for message in websocket:
+                obj = json.loads(message)
+                if obj.get('end'):
+                    return
+                pubs = get_pubs(obj)
+                await filler.finish(pubs)
+                await websocket.send(json.dumps(pubs))
 
-        async for message in websocket:
-            obj = json.loads(message)
-            if obj.get('end'):
-                return
+        except ErrorToTell as e:
+            await websocket.send(json.dumps({'error': str(e)}))
+        except websockets.exceptions.ConnectionClosed as e:
+            logger.error(f"连接意外中断 {e}")
+        except Exception as e:
+            logger.error(f'未知异常 {e}')
+        finally:
+            await websocket.close()
 
-            pubs = get_pubs(obj)
-            await filler.finish(pubs)
-            await websocket.send(json.dumps(pubs))
 
-    except ErrorToTell as e:
-        await websocket.send(json.dumps({'error': str(e)}))
-    except websockets.exceptions.ConnectionClosed as e:
-        logger.error(f"连接意外中断 {e}")
-    except Exception as e:
-        logger.error(f'未知异常 {e}')
-    finally:
-        await websocket.close()
+class FillPubsContext:
+    def __init__(self):
+        self.config = TaskConfig()
+
+    def __enter__(self):
+        return self
+
+    async def create(self, logger):
+        config = self.config
+        config.logger = logger
+        try:
+            browser = await nodriver_tool.create(logger)
+        except Exception as e:
+            logger.error(e)
+            raise ErrorToTell(f'nodriver启动浏览器出错 {e}')
+
+        config.browser = browser
+        return FillPubsAbstract(self.config)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        logger = self.config.logger
+        browser = self.config.browser
+        logger.info('准备关闭浏览器')
+        try:
+            browser.stop()  # 标准关闭
+        except Exception as e:
+            logger.info('关闭浏览器异常 ' + traceback.format_exc())
+            raise e  # 再次抛出，不影响原异常
 
 
 def get_pubs(obj):
@@ -43,17 +73,3 @@ def get_pubs(obj):
 
     except (KeyError, AssertionError) as e:
         raise ErrorToTell(f'请求参数异常 {e}')
-
-
-async def initialize_config(logger):
-    """Initialize RunnerConfig and parse parameters."""
-    config = TaskConfig()
-    config.logger = logger
-    try:
-        browser = await nodriver_tool.create(logger)
-    except Exception as e:
-        logger.error(e)
-        raise ErrorToTell(f'nodriver启动浏览器出错 {e}')
-
-    config.browser = browser
-    return config
