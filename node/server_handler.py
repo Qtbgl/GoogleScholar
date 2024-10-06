@@ -18,7 +18,7 @@ async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
                 obj = json.loads(message)
                 if obj.get('end'):
                     return
-                pubs = get_pubs(obj)
+                pubs = parse_params(obj)
                 await filler.finish(pubs)
                 await websocket.send(json.dumps(pubs))
 
@@ -63,7 +63,7 @@ class FillPubsContext:
                 logger.info('关闭浏览器异常 ' + traceback.format_exc())
 
 
-def get_pubs(obj):
+def parse_params(obj):
     try:
         pubs = obj['pubs']
         for pub in pubs:

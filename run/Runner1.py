@@ -1,8 +1,8 @@
 import asyncio
 import traceback
 
-from crawl.by_scholarly import query_scholar, QueryScholarlyError, get_bib_link
-from run.FillPub1 import FillPub1
+from crawl.by_scholarly import QueryScholarlyError, get_bib_link
+from run.ScrapePub1 import ScrapePub1
 from run.pipline1 import ReadResult, RunnerConfig, WriteResult
 
 from tools.bib_tools import add_abstract, del_abstract
@@ -11,11 +11,16 @@ from tools.bib_tools import add_abstract, del_abstract
 class Result:
     def __init__(self):
         self.pages = None
-        self.fail_pubs = []
-        self.filled_pubs = []
+        self.all_pubs = []
+        self._i = None
 
     def set_pages(self, pages):
         self.pages = pages
+
+    def next_id(self):
+        i = self._i
+        self._i += 1
+        return i
 
 
 class Runner1(ReadResult, WriteResult):
@@ -31,17 +36,10 @@ class Runner1(ReadResult, WriteResult):
         # 创建查询
         logger.info(f'任务查询 {item}')
         self.result.set_pages(item.pages)
-        dealer = FillPub1(self.config, self)
-
-        tasks = []
+        scraper = ScrapePub1(self.config, self)
+        tasks = [asyncio.create_task(scraper.producer()), asyncio.create_task(scraper.consumer())]
         try:
-            # for every 10 pubs
-            async for pubs in query_scholar(item):
-                # 爬取网页
-                logger.info(f'准备异步爬取pubs {len(pubs)}')
-                tasks = [asyncio.create_task(dealer.fill_pub(pub)) for pub in pubs]
-                await asyncio.gather(*tasks)  # 异步浏览器爬取
-
+            await asyncio.gather(*tasks)
         except QueryScholarlyError as e:
             logger.error(f'scholarly异常 {traceback.format_exc()}')
             raise e
@@ -61,11 +59,11 @@ class Runner1(ReadResult, WriteResult):
             return 0.0
 
         total = 10 * self.result.pages
-        done = len(self.result.filled_pubs) + len(self.result.fail_pubs)
-        return done / total
+        registered = len(self.result.all_pubs)
+        return registered / total
 
     def deliver_pubs(self):
-        all_pubs = self.result.filled_pubs + self.result.fail_pubs
+        all_pubs = self.result.all_pubs
         if len(all_pubs) == 0:
             return None
 
@@ -103,22 +101,16 @@ class Runner1(ReadResult, WriteResult):
                 obj['bib_raw'] = bib_raw
                 obj['bib'] = bib_str
 
-            obj['error'] = pub.get('error')
+            obj['error'] = '; '.join(pub['error']) if len(pub['error']) else None
             results.append(obj)
 
         # 所有已有的结果
         return results
 
-    def fail_to_fill(self, pub, error):
-        if pub.get('error'):
-            if isinstance(pub['error'], list):
-                pub['error'] = [error] + pub['error']  # 连接
-            else:
-                pub['error'] = [error, pub['error']]
-        else:
-            pub['error'] = error
+    def register_new(self, pub):
+        pub['task_id'] = self.result.next_id()
+        pub['error'] = []
+        self.result.all_pubs.append(pub)
 
-        self.result.fail_pubs.append(pub)
-
-    def success_fill(self, pub):
-        self.result.filled_pubs.append(pub)
+    def mark_error(self, pub, error):
+        pub['error'].append(error)

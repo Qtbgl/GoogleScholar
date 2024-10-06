@@ -31,6 +31,13 @@ class QueryItem:
         return str(self.__dict__)
 
 
+class RunnerConfig:
+    logger: typing.Any
+    item: QueryItem
+    websocket: websockets.WebSocketClientProtocol
+    node_process: asyncio.subprocess.Process
+
+
 class ReadResult:
     def get_progress(self):
         pass
@@ -39,18 +46,11 @@ class ReadResult:
         pass
 
 
-class RunnerConfig:
-    logger: typing.Any
-    item: QueryItem
-    websocket: websockets.WebSocketClientProtocol
-    node_process: asyncio.subprocess.Process
-
-
 class WriteResult:
-    def success_fill(self, pub):
+    def register_new(self, pub):
         pass
 
-    def fail_to_fill(self, pub, error):
+    def mark_error(self, pub, error):
         pass
 
 
