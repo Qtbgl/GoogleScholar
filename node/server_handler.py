@@ -32,6 +32,19 @@ async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
             await websocket.close()
 
 
+def parse_params(obj):
+    try:
+        pubs = obj['pubs']
+        for pub in pubs:
+            assert 'task_id' in pub
+            assert 'url' in pub
+            assert 'title' in pub
+            assert 'cut' in pub
+
+    except (KeyError, AssertionError) as e:
+        raise ErrorToTell(f'请求参数异常 {e}')
+
+
 class FillPubsContext:
     def __init__(self):
         self.config = TaskConfig()
@@ -61,16 +74,3 @@ class FillPubsContext:
                 browser.stop()  # 标准关闭
             except Exception as e:
                 logger.info('关闭浏览器异常 ' + traceback.format_exc())
-
-
-def parse_params(obj):
-    try:
-        pubs = obj['pubs']
-        for pub in pubs:
-            assert 'task_id' in pub
-            assert 'url' in pub
-            assert 'title' in pub
-            assert 'cut' in pub
-
-    except (KeyError, AssertionError) as e:
-        raise ErrorToTell(f'请求参数异常 {e}')

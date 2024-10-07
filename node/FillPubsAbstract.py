@@ -12,6 +12,7 @@ class QuitAbstract(Exception):
 class FillPubsAbstract:
     def __init__(self, config: TaskConfig):
         self.config = config
+        self._uc_lock = asyncio.Semaphore(5)
 
     async def finish(self, pubs):
         logger = self.config.logger
@@ -32,20 +33,24 @@ class FillPubsAbstract:
             await asyncio.gather(*tasks, return_exceptions=True)
 
     async def fill_abstract(self, pub):
-        logger = self.config.logger
-        task_id = pub['task_id']
-        logger.debug(f'进入摘要任务 {task_id}')
-        try:
-            await self._fill_abstract(pub)
-            logger.debug(f'摘要任务成功 {task_id}')
-        except QuitAbstract as e:
-            logger.error(f'摘要任务失败 {e} {task_id}')
-        except asyncio.CancelledError:
-            logger.debug(f'取消摘要任务 {task_id}')
-            raise
-        except Exception as e:
-            logger.error(f'摘要任务失败 {e} {task_id}')
-            raise
+        """
+        限制异步访问数量
+        """
+        with self._uc_lock:
+            logger = self.config.logger
+            task_id = pub['task_id']
+            logger.debug(f'进入摘要任务 {task_id}')
+            try:
+                await self._fill_abstract(pub)
+                logger.debug(f'摘要任务成功 {task_id}')
+            except QuitAbstract as e:
+                logger.error(f'摘要任务失败 {e} {task_id}')
+            except asyncio.CancelledError:
+                logger.debug(f'取消摘要任务 {task_id}')
+                raise
+            except Exception as e:
+                logger.error(f'摘要任务失败 {e} {task_id}')
+                raise
 
     async def _fill_abstract(self, pub):
         """

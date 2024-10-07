@@ -1,11 +1,16 @@
+from datetime import datetime
+
 from fastapi import Path, WebSocket
 from starlette.websockets import WebSocketDisconnect
 import asyncio
 import traceback
-from run.pipline1 import RunnerContext, GoodbyeBecauseOfError
+
+from run.context1 import RunnerContext
+from run.pipline1 import GoodbyeBecauseOfError
 from run.Runner1 import Runner1
 
 from app.api_tool import app
+from tools.log_tool import create_logger
 
 
 @app.websocket("/query1/{name}")
@@ -14,19 +19,20 @@ async def query1(
         name: str = Path(..., title="terms to be searched"),
 ):
     await websocket.accept()
-
-    from log_config import logger
+    logger = create_logger("app", datetime.now())
     logger.info(f'新连接 {websocket.url}')
 
     async def goodbye(msg_obj: dict):
         await websocket.send_json(msg_obj)
         await websocket.close()
 
-    with RunnerContext() as context:
+    async with RunnerContext() as context:
         try:
             obj = await websocket.receive_json()
+            logger.debug(f'temp 接收到{obj}')
             config = await context.initialize_config(name, obj, logger)
-            await run_task(websocket, config)
+            logger.debug(f'temp 初始化完成')
+            await run_task(websocket, config)  # TODO: 心跳包括初始化
         except GoodbyeBecauseOfError as e:
             await goodbye({'error': str(e)})
         except WebSocketDisconnect as e:

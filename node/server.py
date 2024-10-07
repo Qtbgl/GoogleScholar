@@ -9,7 +9,7 @@ from data import api_config
 
 async def open_server():
     # 创建 logger 实例
-    logger = create_logger('subs', datetime.now())
+    logger = create_logger('node', datetime.now())
     port = api_config.sub_node_port
 
     async def handler(websocket, path):
