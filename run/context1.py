@@ -101,10 +101,15 @@ async def create_node_process(logger):
     except Exception as e:
         if node_process.returncode is not None:
             logger.error(f"子结点启动失败，准备结束进程")
-            node_process.kill()  # 终止子进程
-            await node_process.wait()  # 等待进程完全终止
-            logger.info("已结束子结点进程")
-        raise e
+            try:
+                node_process.kill()  # 终止子进程
+                await node_process.wait()  # 等待进程完全终止
+                logger.info("已结束子结点进程")
+            except ProcessLookupError:
+                logger.error("尝试终止进程时出错：进程不存在。")
+            except Exception as e:
+                logger.error(f'关闭进程失败 {traceback.format_exc(chain=False)}')
+        raise
 
 
 async def connect_to_node(node_process, logger, timeout=60):

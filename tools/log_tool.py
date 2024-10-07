@@ -26,9 +26,9 @@ def create_logger(name: str, log_time: datetime, log_dir='data/log'):
 
     # 创建日志格式
     # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    formatter = logging.Formatter('%(name)s: %(asctime)s %(levelname)s %(message)s',
-                                  datefmt='%y-%m-%d %H:%M:%S')
-    # app: 2024-10-04 17:41:08 INFO 新连接 ws://127.0.0.1:8000/query1/pulmonary nodule classification
+    formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s',
+                                  datefmt='%m-%d %H:%M:%S')
+    # app 10-04 17:41:08 INFO 新连接 ws://127.0.0.1:8000/query1/pulmonary nodule classification
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
 

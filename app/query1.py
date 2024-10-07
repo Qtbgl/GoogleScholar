@@ -29,10 +29,8 @@ async def query1(
     async with RunnerContext() as context:
         try:
             obj = await websocket.receive_json()
-            logger.debug(f'temp 接收到{obj}')
             config = await context.initialize_config(name, obj, logger)
-            logger.debug(f'temp 初始化完成')
-            await run_task(websocket, config)  # TODO: 心跳包括初始化
+            await run_task(websocket, config)
         except GoodbyeBecauseOfError as e:
             await goodbye({'error': str(e)})
         except WebSocketDisconnect as e:

@@ -56,18 +56,19 @@ class ScrapePub1:
             pubs = pubs_to_fill
 
         # 创建任务
-        tasks = [self.send_to_fill_abstract(pubs)]
+        tasks = [asyncio.create_task(self.send_to_fill_abstract(pubs))]
         if not item.ignore_bibtex:
             for pub in pubs:
-                tasks.append(self.fill_bibtex(pub))
+                tasks.append(asyncio.create_task(self.fill_bibtex(pub)))
 
         try:
             # 等待所有任务完成
             await asyncio.gather(*tasks)
-        except Exception as e:
-            # 未知的异常
-            logger.error(f'未知异常 {traceback.format_exc()}')
-            raise
+        finally:
+            for task in tasks:
+                task.cancel()
+            # 等待所有任务完成取消
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def send_to_fill_abstract(self, pubs):
         logger = self.config.logger

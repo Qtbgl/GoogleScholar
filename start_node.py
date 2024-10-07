@@ -1,4 +1,6 @@
+import asyncio
+
 from node.server import open_server
 
 if __name__ == '__main__':
-    open_server()
+    asyncio.run(open_server())

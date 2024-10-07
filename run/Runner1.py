@@ -12,7 +12,7 @@ class Result:
     def __init__(self):
         self.pages = None
         self.all_pubs = []
-        self._i = None
+        self._i = 0
 
     def set_pages(self, pages):
         self.pages = pages
@@ -44,7 +44,7 @@ class Runner1(ReadResult, WriteResult):
             logger.error(f'scholarly异常 {traceback.format_exc()}')
             raise e
         except Exception as e:
-            logger.error(f'未知异常 {e}')
+            logger.error(f'未知异常 {traceback.format_exc()}')
             raise Exception(f'发生异常，中断爬取 {e}')
         finally:
             # 取消未完成的任务
