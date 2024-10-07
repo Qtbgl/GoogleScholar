@@ -45,9 +45,8 @@ class RunnerContext:
         if websocket is not None:
             try:
                 await websocket.close()
-                logger.info("WebSocket connection closed.")
             except Exception as e:
-                logger.error(e)
+                logger.error(f'关闭子结点连接异常 {e}')
 
         node_process = self.config.node_process
         if node_process is not None:
@@ -57,6 +56,7 @@ class RunnerContext:
 
             try:
                 await asyncio.wait_for(wait_to_stop(), 30)
+                logger.info(f'子结点进程已结束')
             except asyncio.TimeoutError:
                 logger.info("Node process is still running.")
                 try:
@@ -141,7 +141,9 @@ async def connect_to_node(node_process, logger, timeout=60):
 
         # 检查结点已启动
         try:
-            return await websockets.connect(url)
+            websocket_connection = await websockets.connect(url)
+            logger.info(f'成功连接到子结点 {url}')
+            return websocket_connection
         except ConnectionRefusedError:
             logger.error(f"连接失败，正在重试...")
 

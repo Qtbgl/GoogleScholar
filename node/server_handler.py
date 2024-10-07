@@ -68,9 +68,9 @@ class FillPubsContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         logger = self.config.logger
         if self.config.browser:
-            logger.info('准备关闭浏览器')
             try:
                 browser = self.config.browser
                 browser.stop()  # 标准关闭
+                logger.info('已关闭浏览器')
             except Exception as e:
                 logger.info('关闭浏览器异常 ' + traceback.format_exc())

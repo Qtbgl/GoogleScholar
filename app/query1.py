@@ -34,7 +34,7 @@ async def query1(
         except GoodbyeBecauseOfError as e:
             await goodbye({'error': str(e)})
         except WebSocketDisconnect as e:
-            logger.error(f"Connection closed {e}")
+            logger.error(f"query1 意外断开连接 {e}")
         except Exception as e:
             logger.error(f'query1 吸收异常 {e} ' + traceback.format_exc())
 

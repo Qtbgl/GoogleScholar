@@ -69,16 +69,22 @@ class QueryScholarlyError(Exception):
 class SearchPubsAsync:
     def __init__(self, item: QueryItem):
         self.item = item
+        self.q = None
 
     def __aiter__(self):
+        return self
+
+    def init_q(self):
+        # 初始化生成器
         item = self.item
         name = self.item.name
-        # 创建生成器
         self.q = scholarly.search_pubs(name, year_low=item.year_low, year_high=item.year_high)
-        return self
 
     def next_to_anext(self):
         try:
+            if self.q is None:
+                self.init_q()
+
             return next(self.q)
         except StopIteration:
             raise StopAsyncIteration  # 异步退出信号
