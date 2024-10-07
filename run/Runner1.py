@@ -85,7 +85,7 @@ class Runner1(ReadResult, WriteResult):
             }
             # 加入bib
             if item.ignore_bibtex:
-                obj['bib_link'] = get_bib_link(pub['raw_pub'])  # 为以后添加
+                obj['bib_link'] = get_bib_link(pub)  # 为以后添加
             else:
                 bib_link = pub.get('BibTeX', empty_bib).get('link')
                 bib_raw = pub.get('BibTeX', empty_bib).get('string')

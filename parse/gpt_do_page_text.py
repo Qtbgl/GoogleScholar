@@ -29,7 +29,7 @@ class GptDoPageText(AskGpt):
         root = BeautifulSoup(html_str, 'html.parser')
         web_txt = extract_text(root)
         query_txt = '\n'.join([
-            '以下是一段不完整的摘要：', cut,
+            '以下是一段不完整的摘要：', str(cut),
             '以下是该文章/出版物的网页内容：', web_txt,
             '请从上面的网页内容中找出完整的摘要，直接以英文输出摘要'
         ])

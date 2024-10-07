@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 
 from crawl.wait_page_tool import wait_to_complete, wait_for_text, SearchTitleOnPage
 from node.node_pipline import TaskConfig, ErrorToTell
@@ -23,7 +24,7 @@ class FillPubsAbstract:
             await asyncio.gather(*tasks)  # 异步浏览器爬取
 
         except Exception as e:
-            logger.error(f'未知异常 {e}')
+            logger.error(f'未知异常 {traceback.format_exc()}')
             raise ErrorToTell(f'发生异常，中断爬取 {e}')
         finally:
             # 取消未完成的任务
@@ -36,7 +37,7 @@ class FillPubsAbstract:
         """
         限制异步访问数量
         """
-        with self._uc_lock:
+        async with self._uc_lock:
             logger = self.config.logger
             task_id = pub['task_id']
             logger.debug(f'进入摘要任务 {task_id}')
@@ -45,11 +46,12 @@ class FillPubsAbstract:
                 logger.debug(f'摘要任务成功 {task_id}')
             except QuitAbstract as e:
                 logger.error(f'摘要任务失败 {e} {task_id}')
+                # 吸收此类型异常
             except asyncio.CancelledError:
                 logger.debug(f'取消摘要任务 {task_id}')
                 raise
             except Exception as e:
-                logger.error(f'摘要任务失败 {e} {task_id}')
+                logger.error(f'摘要任务失败 {type(e)} {e} {task_id}')
                 raise
 
     async def _fill_abstract(self, pub):

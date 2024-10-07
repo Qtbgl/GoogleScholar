@@ -96,10 +96,13 @@ class SearchPubsAsync:
         return value
 
 
-def get_bib_link(raw_pub):
-    if 'url_scholarbib' in raw_pub:
-        return 'https://scholar.google.com' + raw_pub['url_scholarbib']
-    return None
+def get_bib_link(pub):
+    raw_pub = pub.get('raw_pub')
+    if raw_pub is None:
+        return None
+
+    base_url = 'https://scholar.google.com'
+    return base_url + raw_pub['url_scholarbib'] if 'url_scholarbib' in raw_pub else None
 
 
 async def fill_bibtex(pub):

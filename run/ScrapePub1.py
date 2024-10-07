@@ -38,7 +38,8 @@ class ScrapePub1:
             queue.task_done()  # 本次处理周期结束
 
         # 所有任务都结束时
-        await websocket.send(json.dumps({'end': True}))
+        if not websocket.closed:
+            await websocket.send(json.dumps({'end': True}))
 
     async def process_pubs(self, pubs):
         logger = self.config.logger
@@ -62,6 +63,7 @@ class ScrapePub1:
                 tasks.append(asyncio.create_task(self.fill_bibtex(pub)))
 
         try:
+            logger.debug(f'process_pubs 创建异步任务 {tasks}')
             # 等待所有任务完成
             await asyncio.gather(*tasks)
         finally:
@@ -74,18 +76,22 @@ class ScrapePub1:
         logger = self.config.logger
         websocket = self.config.websocket
 
-        logger.debug(f'准备调用子结点处理 {len(pubs)}')
+        logger.info(f'准备调用子结点处理 {len(pubs)}')
         await websocket.send(json.dumps({'pubs': pubs}))
 
-        logger.debug(f'等待子结点结果中')
         message = await websocket.recv()
-        result = {pub['task_id']: pub for pub in json.loads(message)}
-        for pub in pubs:
-            pub['abstract'] = result[pub['task_id']].get('abstract')
-            if not pub['abstract']:
+        obj = json.loads(message)
+        if 'error' in obj:
+            logger.error(f'子结点出错 {obj["error"]}')
+            for pub in pubs:
                 self.writer.mark_error(pub, '爬取摘要失败')
-
-        logger.debug(f'子结点处理完成')
+        else:
+            logger.info(f'子结点处理完成')
+            result = {pub['task_id']: pub for pub in obj['pubs']}
+            for pub in pubs:
+                pub['abstract'] = result[pub['task_id']].get('abstract')
+                if not pub['abstract']:
+                    self.writer.mark_error(pub, '爬取摘要失败')
 
     async def fill_bibtex(self, pub, tries=0):
         """
@@ -95,7 +101,7 @@ class ScrapePub1:
         using_proxy = api_config.scholarly_use_proxy
         logger = self.config.logger
         succeed = False
-        with self._bibtex_lock:
+        async with self._bibtex_lock:
             try:
                 await asyncio.wait_for(fill_bibtex(pub), timeout=60)  # debug 防止一直等下去
                 logger.debug(f'bibtex任务成功 {pub["task_id"]}')

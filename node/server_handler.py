@@ -18,16 +18,18 @@ async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
                 obj = json.loads(message)
                 if obj.get('end'):
                     return
+                # logger.debug(f'主进程传入参数 {obj}')
                 pubs = parse_params(obj)
                 await filler.finish(pubs)
-                await websocket.send(json.dumps(pubs))
+                obj = {'pubs': pubs}
+                await websocket.send(json.dumps(obj))
 
         except ErrorToTell as e:
             await websocket.send(json.dumps({'error': str(e)}))
         except websockets.exceptions.ConnectionClosed as e:
             logger.error(f"连接意外中断 {e}")
         except Exception as e:
-            logger.error(f'未知异常 {e}')
+            logger.error(f'未知异常 {traceback.format_exc()}')
         finally:
             await websocket.close()
 
@@ -40,7 +42,7 @@ def parse_params(obj):
             assert 'url' in pub
             assert 'title' in pub
             assert 'cut' in pub
-
+        return pubs
     except (KeyError, AssertionError) as e:
         raise ErrorToTell(f'请求参数异常 {e}')
 
