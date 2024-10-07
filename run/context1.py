@@ -51,7 +51,13 @@ class RunnerContext:
 
         node_process = self.config.node_process
         if node_process is not None:
-            if node_process.returncode is None:
+            async def wait_to_stop():
+                while node_process.returncode is None:
+                    await asyncio.sleep(1)
+
+            try:
+                await asyncio.wait_for(wait_to_stop(), 30)
+            except asyncio.TimeoutError:
                 logger.info("Node process is still running.")
                 try:
                     node_process.terminate()
@@ -59,10 +65,13 @@ class RunnerContext:
                     await asyncio.wait_for(node_process.wait(), 60)
                     logger.info("Node process terminated.")
                 except Exception as e:
-                    logger.error(e)
-                    node_process.kill()  # 强制结束进程
-                    await node_process.wait()  # 等待进程完全终止
-                    logger.info("Node process killed.")
+                    logger.error(f'Error when terminating {e}')
+                    try:
+                        node_process.kill()  # 强制结束进程
+                        await node_process.wait()  # 等待进程完全终止
+                        logger.info("Node process killed.")
+                    except Exception as e:
+                        logger.error(f'Fail to kill {traceback.format_exc(chain=False)}')
 
 
 @param_check
@@ -99,14 +108,14 @@ async def create_node_process(logger):
         websocket = await connect_to_node(node_process, logger)
         return node_process, websocket
     except Exception as e:
-        if node_process.returncode is not None:
+        if node_process.returncode is None:  # debug
             logger.error(f"子结点启动失败，准备结束进程")
             try:
                 node_process.kill()  # 终止子进程
                 await node_process.wait()  # 等待进程完全终止
                 logger.info("已结束子结点进程")
-            except ProcessLookupError:
-                logger.error("尝试终止进程时出错：进程不存在。")
+            # except ProcessLookupError:
+            #     logger.error("尝试终止进程时出错：进程不存在。")
             except Exception as e:
                 logger.error(f'关闭进程失败 {traceback.format_exc(chain=False)}')
         raise
@@ -127,7 +136,7 @@ async def connect_to_node(node_process, logger, timeout=60):
             stderr_output = await node_process.stderr.read()
             stderr_output = stderr_output.decode().strip()
             exit_code = node_process.returncode
-            logger.error(f"Node Process意外退出 {exit_code}, Error output: {stderr_output}")
+            logger.error(f"Node Process意外退出 {exit_code}, stderr: {stderr_output}")
             raise Exception(f"Node Process意外退出 {exit_code}")
 
         # 检查结点已启动
