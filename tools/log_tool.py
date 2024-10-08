@@ -10,10 +10,11 @@ def create_logger(name: str, log_time: datetime, log_dir='data/log'):
         os.makedirs(log_dir)
 
     # 设置日志文件名
-    log_file = os.path.join(log_dir, f"{log_time.strftime('%Y-%m-%d-%H%M%S')}_{name}.log")
+    new_name = f"{log_time.strftime('%Y-%m-%d-%H%M%S')}_{name}.log"
+    log_file = os.path.join(log_dir, new_name)
 
     # 创建 Logger
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(new_name)
     logger.setLevel(logging.DEBUG)  # 设置日志级别为 DEBUG
 
     # 创建文件处理器
@@ -26,7 +27,7 @@ def create_logger(name: str, log_time: datetime, log_dir='data/log'):
 
     # 创建日志格式
     # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(message)s',
+    formatter = logging.Formatter(f'{name} %(asctime)s %(levelname)s %(message)s',
                                   datefmt='%m-%d %H:%M:%S')
     # app 10-04 17:41:08 INFO 新连接 ws://127.0.0.1:8000/query1/pulmonary nodule classification
     console_handler.setFormatter(formatter)

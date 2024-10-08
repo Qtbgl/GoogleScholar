@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 
 import websockets
@@ -14,20 +15,33 @@ async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
         try:
             logger.info("开始创建任务资源")
             filler = await context.create(logger)
-            async for message in websocket:
+            async for message in websocket:  # 客户端关闭连接时，异步生成器自然结束
                 obj = json.loads(message)
                 # logger.debug(f'主进程传入参数 {obj}')
                 pubs = parse_params(obj)
-                await filler.finish(pubs)
+
+                # 创建并执行任务
+                task = asyncio.create_task(filler.finish(pubs))
+
+                # 等待任务完成并检查连接状态
+                while not task.done():
+                    await asyncio.sleep(3)
+                    if websocket.closed:  # 检查连接状态
+                        logger.error("在处理任务时，WebSocket 连接已关闭")
+                        task.cancel()
+                        break
+
+                # 自动抛出异常，或等待取消异常（最优化代码逻辑）
+                await task
+
                 logger.info('已完成本次任务')
-                obj = {'pubs': pubs}
-                await websocket.send(json.dumps(obj))
+                await websocket.send(json.dumps({'pubs': pubs}))
                 logger.info('已发送结果')
 
+        except asyncio.CancelledError as e:
+            logger.error(f'子结点被取消 {e}')
         except ErrorToTell as e:
             await websocket.send(json.dumps({'error': str(e)}))
-        except websockets.exceptions.ConnectionClosedOK as e:
-            logger.error(f"主进程正常关闭连接 {e}")
         except websockets.exceptions.ConnectionClosed as e:
             logger.error(f"连接意外中断 {e}")
         except Exception as e:

@@ -81,23 +81,25 @@ class ScrapePub1:
     async def send_to_fill_abstract(self, pubs):
         logger = self.config.logger
         websocket = self.config.websocket
-
         logger.info(f'准备调用子结点处理 {len(pubs)}')
-        await websocket.send(json.dumps({'pubs': pubs}))
+        try:
+            await websocket.send(json.dumps({'pubs': pubs}))
+            message = await websocket.recv()
+            obj = json.loads(message)
+            if 'error' in obj:
+                logger.error(f'子结点出错 {obj["error"]}')
+                raise Exception(f'子结点爬取摘要出错')
+            else:
+                logger.info(f'子结点处理完成')
+                result = {pub['task_id']: pub for pub in obj['pubs']}
+                for pub in pubs:
+                    pub['abstract'] = result[pub['task_id']].get('abstract')
+                    if not pub['abstract']:
+                        self.writer.mark_error(pub, '爬取摘要失败')
 
-        message = await websocket.recv()
-        obj = json.loads(message)
-        if 'error' in obj:
-            logger.error(f'子结点出错 {obj["error"]}')
-            for pub in pubs:
-                self.writer.mark_error(pub, '爬取摘要失败')
-        else:
-            logger.info(f'子结点处理完成')
-            result = {pub['task_id']: pub for pub in obj['pubs']}
-            for pub in pubs:
-                pub['abstract'] = result[pub['task_id']].get('abstract')
-                if not pub['abstract']:
-                    self.writer.mark_error(pub, '爬取摘要失败')
+        except asyncio.CancelledError:
+            logger.debug(f'子结点任务被取消')  # 日志调试打印
+            raise
 
     async def fill_bibtex(self, pub, tries=0):
         """
