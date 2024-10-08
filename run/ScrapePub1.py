@@ -6,6 +6,8 @@ from crawl.by_scholarly import query_scholar, fill_bibtex
 from run.pipline1 import RunnerConfig, WriteResult
 from data import api_config
 
+from tools.pub_log_tool import display_pub_url
+
 
 class ScrapePub1:
     def __init__(self, config: RunnerConfig, writer: WriteResult):
@@ -15,31 +17,35 @@ class ScrapePub1:
         self._bibtex_lock = asyncio.Semaphore(5)  # 请求锁，限制访问量
 
     async def producer(self):
+        logger = self.config.logger
         item = self.config.item
         queue = self._pubs_queue
 
         async for pubs in query_scholar(item):
             for pub in pubs:
                 self.writer.register_new(pub)  # 加入到结果集中
-
+            logger.debug(f'新加入结果集 {display_pub_url(pubs)}')
             await queue.put(pubs)
 
         await queue.put(None)  # 放入特殊标记，表示结束
 
     async def consumer(self):
+        logger = self.config.logger
         websocket = self.config.websocket
         queue = self._pubs_queue
-        while True:
-            pubs = await queue.get()
-            if pubs is None:  # 检查特殊标记
-                break
+        try:
+            while True:
+                pubs = await queue.get()
+                if pubs is None:  # 检查特殊标记
+                    logger.info(f'consumer已完成所有pubs的处理')
+                    break
 
-            await self.process_pubs(pubs)  # 异步浏览器爬取
-            queue.task_done()  # 本次处理周期结束
-
-        # 所有任务都结束时
-        if not websocket.closed:
-            await websocket.send(json.dumps({'end': True}))
+                await self.process_pubs(pubs)  # 异步浏览器爬取
+                queue.task_done()  # 本次处理周期结束
+        finally:
+            # 所有任务都结束时
+            if not websocket.closed:
+                await websocket.close()
 
     async def process_pubs(self, pubs):
         logger = self.config.logger
@@ -63,7 +69,7 @@ class ScrapePub1:
                 tasks.append(asyncio.create_task(self.fill_bibtex(pub)))
 
         try:
-            logger.debug(f'process_pubs 创建异步任务 {tasks}')
+            logger.debug(f'process_pubs 创建异步任务 {len(tasks)}')
             # 等待所有任务完成
             await asyncio.gather(*tasks)
         finally:
@@ -104,12 +110,12 @@ class ScrapePub1:
         async with self._bibtex_lock:
             try:
                 await asyncio.wait_for(fill_bibtex(pub), timeout=60)  # debug 防止一直等下去
-                logger.debug(f'bibtex任务成功 {pub["task_id"]}')
+                logger.debug(f'bibtex任务成功 #{pub["task_id"]}')
                 succeed = True
             except asyncio.TimeoutError as e:
-                logger.debug(f'bibtex获取超时,已尝试{tries + 1} {pub["task_id"]}')
+                logger.debug(f'bibtex获取超时,已尝试{tries + 1} #{pub["task_id"]}')
             except asyncio.CancelledError:
-                logger.info(f'取消bibtex任务 {pub["task_id"]}')
+                logger.info(f'取消bibtex任务 #{pub["task_id"]}')
                 raise
 
         if not succeed:

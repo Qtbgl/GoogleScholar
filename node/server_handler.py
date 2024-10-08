@@ -16,22 +16,25 @@ async def handle_client(websocket: websockets.WebSocketServerProtocol, logger):
             filler = await context.create(logger)
             async for message in websocket:
                 obj = json.loads(message)
-                if obj.get('end'):
-                    return
                 # logger.debug(f'主进程传入参数 {obj}')
                 pubs = parse_params(obj)
                 await filler.finish(pubs)
+                logger.info('已完成本次任务')
                 obj = {'pubs': pubs}
                 await websocket.send(json.dumps(obj))
+                logger.info('已发送结果')
 
         except ErrorToTell as e:
             await websocket.send(json.dumps({'error': str(e)}))
+        except websockets.exceptions.ConnectionClosedOK as e:
+            logger.error(f"主进程正常关闭连接 {e}")
         except websockets.exceptions.ConnectionClosed as e:
             logger.error(f"连接意外中断 {e}")
         except Exception as e:
             logger.error(f'未知异常 {traceback.format_exc()}')
         finally:
-            await websocket.close()
+            if not websocket.closed:
+                await websocket.close()
 
 
 def parse_params(obj):

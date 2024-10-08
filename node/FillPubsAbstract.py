@@ -4,6 +4,7 @@ import traceback
 from crawl.wait_page_tool import wait_to_complete, wait_for_text, SearchTitleOnPage
 from node.node_pipline import TaskConfig, ErrorToTell
 from parse.gpt_do_page_text import GptDoPageText
+from tools.pub_log_tool import display_pub_url
 
 
 class QuitAbstract(Exception):
@@ -20,7 +21,7 @@ class FillPubsAbstract:
         tasks = [asyncio.create_task(self.fill_abstract(pub)) for pub in pubs]
         try:
             # 爬取网页
-            logger.info(f'准备异步爬取 {len(pubs)}')
+            logger.info(f'准备异步爬取 {display_pub_url(pubs)}')
             await asyncio.gather(*tasks)  # 异步浏览器爬取
 
         except Exception as e:
@@ -40,18 +41,18 @@ class FillPubsAbstract:
         async with self._uc_lock:
             logger = self.config.logger
             task_id = pub['task_id']
-            logger.debug(f'进入摘要任务 {task_id}')
+            logger.debug(f'进入摘要任务 #{task_id}')
             try:
                 await self._fill_abstract(pub)
-                logger.debug(f'摘要任务成功 {task_id}')
+                logger.debug(f'摘要任务成功 #{task_id}')
             except QuitAbstract as e:
-                logger.error(f'摘要任务失败 {e} {task_id}')
+                logger.error(f'摘要任务失败 {e} #{task_id}')
                 # 吸收此类型异常
             except asyncio.CancelledError:
-                logger.debug(f'取消摘要任务 {task_id}')
+                logger.debug(f'取消摘要任务 #{task_id}')
                 raise
             except Exception as e:
-                logger.error(f'摘要任务失败 {type(e)} {e} {task_id}')
+                logger.error(f'摘要任务失败 {type(e)} {e} #{task_id}')
                 raise
 
     async def _fill_abstract(self, pub):
