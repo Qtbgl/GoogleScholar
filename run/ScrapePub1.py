@@ -6,7 +6,7 @@ from crawl.by_scholarly import query_scholar, fill_bibtex
 from run.pipline1 import RunnerConfig, WriteResult
 from data import api_config
 
-from tools.pub_log_tool import display_pub_url
+from tools.log_display_tool import display_pub_url
 
 
 class ScrapePub1:

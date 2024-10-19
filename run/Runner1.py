@@ -5,7 +5,7 @@ from crawl.by_scholarly import QueryScholarlyError, get_bib_link
 from run.ScrapePub1 import ScrapePub1
 from run.pipline1 import ReadResult, RunnerConfig, WriteResult
 
-from tools.bib_tools import add_abstract, del_abstract
+from tools.bib_tool import add_abstract, del_abstract
 
 
 class Result:

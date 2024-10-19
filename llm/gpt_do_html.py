@@ -1,6 +1,6 @@
 import traceback
 
-from parse.AskGpt import AskGpt
+from llm.AskGpt import AskGpt
 
 
 class GptDoHtml(AskGpt):

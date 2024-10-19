@@ -2,7 +2,7 @@ import traceback
 
 from bs4 import BeautifulSoup, Comment
 
-from parse.AskGpt import AskGpt
+from llm.AskGpt import AskGpt
 
 
 def extract_text(root):

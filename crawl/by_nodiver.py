@@ -4,7 +4,7 @@ import asyncio
 
 from nodriver.core.browser import Browser, Config
 
-from crawl import nodriver_tool
+from crawl import uc_browser_tool
 
 
 class Crawl:
@@ -13,7 +13,7 @@ class Crawl:
         """
         :return: 可能抛出浏览器打开异常
         """
-        browser = await nodriver_tool.create(logger)
+        browser = await uc_browser_tool.create(logger)
 
         return cls(logger, browser)
 

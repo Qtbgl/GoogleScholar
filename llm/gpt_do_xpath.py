@@ -1,6 +1,6 @@
 import re
 
-from tools.html_tools import merge_xpath, get_xpath
+from tools.parse_html_tool import merge_xpath, get_xpath
 from tools.llm_tools import ask_gpt
 
 
