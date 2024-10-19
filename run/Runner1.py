@@ -3,7 +3,8 @@ import traceback
 
 from crawl.by_scholarly import QueryScholarlyError, get_bib_link
 from run.ScrapePub1 import ScrapePub1
-from run.pipline1 import ReadResult, RunnerConfig, WriteResult
+from run.context1 import RunnerConfig
+from run.pipline1 import ReadResult, WriteResult
 
 from tools.bib_tool import add_abstract, del_abstract
 
@@ -37,7 +38,7 @@ class Runner1(ReadResult, WriteResult):
         logger.info(f'任务查询 {item}')
         self.result.set_pages(item.pages)
         scraper = ScrapePub1(self.config, self)
-        tasks = [scraper.producer()] + [scraper.consumer() for i in range(10)]
+        tasks = [scraper.producer()] + [scraper.consumer() for i in range(5)]
         tasks = map(asyncio.create_task, tasks)
         try:
             await asyncio.gather(*tasks)
@@ -53,6 +54,7 @@ class Runner1(ReadResult, WriteResult):
                 task.cancel()
                 # 等待所有任务完成取消
             await asyncio.gather(*tasks, return_exceptions=True)
+            logger.debug(f'所有任务（生产者，消费者等）已结束')
         # 不返回结果
 
     def get_progress(self):

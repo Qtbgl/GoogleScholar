@@ -5,8 +5,7 @@ from starlette.websockets import WebSocketDisconnect
 import asyncio
 import traceback
 
-from run.context1 import RunnerContext
-from run.pipline1 import GoodbyeBecauseOfError
+from run.context1 import GoodbyeBecauseOfError, initialize_config
 from run.Runner1 import Runner1
 
 from app.api_tool import app
@@ -26,17 +25,19 @@ async def query1(
         await websocket.send_json(msg_obj)
         await websocket.close()
 
-    async with RunnerContext() as context:
-        try:
-            obj = await websocket.receive_json()
-            config = await context.initialize_config(name, obj, logger)
+    try:
+        obj = await websocket.receive_json()
+        config = await initialize_config(name, obj, logger)
+        async with config:
             await run_task(websocket, config)
-        except GoodbyeBecauseOfError as e:
-            await goodbye({'error': str(e)})
-        except WebSocketDisconnect as e:
-            logger.error(f"query1 意外断开连接 {e}")
-        except Exception as e:
-            logger.error(f'query1 吸收异常 {e} ' + traceback.format_exc())
+
+    except GoodbyeBecauseOfError as e:
+        await goodbye({'error': str(e)})
+    except WebSocketDisconnect as e:
+        logger.error(f"query1 意外断开连接 {e}")
+    except Exception as e:
+        logger.error(f'query1 吸收异常 {e} ' + traceback.format_exc())
+        await websocket.close()
 
 
 async def run_task(websocket, config):

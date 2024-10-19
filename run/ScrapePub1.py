@@ -1,10 +1,10 @@
 import asyncio
-import json
 import traceback
 
 from crawl.by_scholarly import query_scholar
 from run.FillPub1 import FillPub1
-from run.pipline1 import RunnerConfig, WriteResult
+from run.context1 import RunnerConfig
+from run.pipline1 import WriteResult
 from data import api_config
 
 from tools.log_display_tool import display_pub_url
@@ -21,26 +21,33 @@ class ScrapePub1:
         logger = self.config.logger
         item = self.config.item
         queue = self._pub_queue
+        try:
+            async for pubs in query_scholar(item):
+                for pub in pubs:
+                    self.writer.register_new(pub)  # 加入到结果集中
+                    await queue.put(pub)
+                logger.debug(f'新搜索到的文献 {display_pub_url(pubs)}')
 
-        async for pubs in query_scholar(item):
-            logger.debug(f'新搜索到的文献 {display_pub_url(pubs)}')
-            for pub in pubs:
-                self.writer.register_new(pub)  # 加入到结果集中
-                await queue.put(pub)
-
-        await queue.put(None)  # 放入特殊标记，表示结束
+            await queue.put(None)  # 放入特殊标记，表示结束
+        except asyncio.CancelledError:
+            logger.debug(f'生产者传递取消异常')
+            raise
 
     async def consumer(self):
         logger = self.config.logger
         queue = self._pub_queue
-        while True:
-            pub = await queue.get()  # 等待元素
-            if pub is None:
-                queue.put_nowait(None)  # 放回特殊标记
-                break
+        try:
+            while True:
+                pub = await queue.get()  # 等待元素
+                if pub is None:
+                    queue.put_nowait(None)  # 放回特殊标记
+                    break
 
-            await self.process_pub(pub)
-            queue.task_done()  # 本次处理周期结束
+                await self.process_pub(pub)
+                queue.task_done()  # 本次处理周期结束
+        except asyncio.CancelledError:
+            logger.debug(f'消费者传递取消异常')
+            raise
 
     async def process_pub(self, pub):
         logger = self.config.logger
@@ -66,3 +73,4 @@ class ScrapePub1:
                 task.cancel()
             # 等待所有任务完成取消
             await asyncio.gather(*tasks, return_exceptions=True)
+            logger.debug(f'退出文献填充任务 #{pub["task_id"]}')

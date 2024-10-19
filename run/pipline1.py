@@ -1,6 +1,3 @@
-import logging
-
-
 class QueryItem:
     name: str
     pages: int
@@ -21,11 +18,6 @@ class QueryItem:
         return str(self.__dict__)
 
 
-class RunnerConfig:
-    logger: logging.Logger
-    item: QueryItem
-
-
 class ReadResult:
     def get_progress(self):
         pass
@@ -40,7 +32,3 @@ class WriteResult:
 
     def mark_error(self, pub, error):
         pass
-
-
-class GoodbyeBecauseOfError(Exception):
-    pass

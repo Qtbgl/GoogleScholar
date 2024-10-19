@@ -6,7 +6,8 @@ from spider import AsyncSpider
 from crawl.by_scholarly import fill_bibtex
 from llm.AskGpt import AskGpt
 from llm.gpt_do_page_text import process_html
-from run.pipline1 import RunnerConfig, WriteResult
+from run.context1 import RunnerConfig
+from run.pipline1 import WriteResult
 from data import api_config
 
 
@@ -18,7 +19,6 @@ class FillPub1:
     def __init__(self, config: RunnerConfig, writer: WriteResult):
         self.config = config
         self.writer = writer
-        self.spider = AsyncSpider(api_key=api_config.spider_api_key)
 
     async def fill_abstract(self, pub):
         """
@@ -47,6 +47,7 @@ class FillPub1:
         GPT询问时间: 不超过60s
         """
         logger = self.config.logger
+        spider = self.config.spider
         page_url = pub['url']
 
         if 'pdf' in page_url.lower():
@@ -55,10 +56,11 @@ class FillPub1:
         title = pub['title']
         cut = pub['cut']
         item = None
-        async for data in self.spider.scrape_url(page_url):
+        async for data in spider.scrape_url(page_url):
             item = data[0]
-            if item['error'] or item['status'] != 200:
-                raise QuitAbstract(f"spider爬取失败: {item['status']}, {item['error']}")
+
+        if item['error'] or item['status'] != 200:
+            raise QuitAbstract(f"spider爬取失败: {item['status']}, {item['error']}")
 
         try:
             html_str = item['content']

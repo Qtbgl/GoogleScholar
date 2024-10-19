@@ -1,30 +1,44 @@
-from run.pipline1 import RunnerConfig, GoodbyeBecauseOfError, QueryItem
+import logging
+
+from spider import AsyncSpider
+
+from run.pipline1 import QueryItem
 from app.params_tool import param_check, check_key, get_int, get_bool, ParamError
+from data import api_config
 
 
-class RunnerContext:
-    def __init__(self):
-        self.config = RunnerConfig()
-
-    async def initialize_config(self, name, obj, logger):
-        """Initialize RunnerConfig and parse parameters."""
-        config = self.config
-        config.logger = logger
-        try:
-            config.item = parse_params(name, obj)
-        except ParamError as e:
-            raise GoodbyeBecauseOfError(f"api参数异常 {e}")
-        except Exception as e:
-            logger.error(f'初始化时异常 {type(e)} {e}')
-            raise GoodbyeBecauseOfError(e)
-
-        return config
+class RunnerConfig:
+    logger: logging.Logger
+    item: QueryItem
+    spider: AsyncSpider
 
     async def __aenter__(self):
+        await self.spider.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.spider.__aexit__(exc_type, exc_val, exc_tb)
         pass
+
+
+async def initialize_config(name, obj, logger):
+    """Initialize RunnerConfig and parse parameters."""
+    config = RunnerConfig()
+    config.logger = logger
+    try:
+        config.item = parse_params(name, obj)
+        config.spider = AsyncSpider(api_key=api_config.spider_api_key)
+    except ParamError as e:
+        raise GoodbyeBecauseOfError(f"api参数异常 {e}")
+    except Exception as e:
+        logger.error(f'初始化时异常 {type(e)} {e}')
+        raise GoodbyeBecauseOfError(e)
+
+    return config
+
+
+class GoodbyeBecauseOfError(Exception):
+    pass
 
 
 @param_check
