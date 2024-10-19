@@ -4,7 +4,8 @@ import traceback
 from spider import AsyncSpider
 
 from crawl.by_scholarly import fill_bibtex
-from llm.gpt_do_page_text import GptDoPageText
+from llm.AskGpt import AskGpt
+from llm.gpt_do_page_text import process_html
 from run.pipline1 import RunnerConfig, WriteResult
 from data import api_config
 
@@ -61,10 +62,16 @@ class FillPub1:
 
         try:
             html_str = item['content']
-            gpt = GptDoPageText(timeout=60)
+            gpt = AskGpt(timeout=60)
             # 访问GPT，提取结果
-            pub['abstract'] = await gpt.get_abstract(cut, html_str)
-        except (GptDoPageText.GPTQueryError, GptDoPageText.GPTAnswerError) as e:
+            web_txt = process_html(html_str)
+            query_txt = '\n'.join([
+                '以下是一段不完整的摘要：', str(cut),
+                '以下是该文章/出版物的网页内容：', web_txt,
+                '请从上面的网页内容中找出完整的摘要，直接以英文输出摘要'
+            ])
+            pub['abstract'] = await gpt.ask_gpt(query_txt)
+        except (AskGpt.GPTQueryError, AskGpt.GPTAnswerError) as e:
             raise QuitAbstract(e)
 
     async def fill_bibtex(self, pub):
