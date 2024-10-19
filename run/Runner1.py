@@ -37,7 +37,8 @@ class Runner1(ReadResult, WriteResult):
         logger.info(f'任务查询 {item}')
         self.result.set_pages(item.pages)
         scraper = ScrapePub1(self.config, self)
-        tasks = [asyncio.create_task(scraper.producer()), asyncio.create_task(scraper.consumer())]
+        tasks = [scraper.producer()] + [scraper.consumer() for i in range(10)]
+        tasks = map(asyncio.create_task, tasks)
         try:
             await asyncio.gather(*tasks)
         except QueryScholarlyError as e:

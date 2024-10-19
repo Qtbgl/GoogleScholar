@@ -2,24 +2,9 @@ import asyncio
 import traceback
 
 from bs4 import BeautifulSoup
-from scholarly import scholarly, ProxyGenerator, Publication
 
-from data import api_config
-
+from crawl.scholarly_tool import scholarly, get_scholarly_nav
 from run.pipline1 import QueryItem
-
-
-def use_proxy():
-    # 配置代理
-    pg = ProxyGenerator()
-    succeed = pg.SingleProxy(api_config.ipfoxy_proxy_auth)
-    # logger.debug(f'设置 scholarly IP代理 {"succeed" if succeed else "failed"}')
-    if not succeed:
-        return False
-
-    # success = pg.SingleProxy(http = <your http proxy>, https = <your https proxy>)
-    scholarly.use_proxy(pg, secondary_proxy_generator=pg)
-    return True
 
 
 def parse_pub(json_obj):
@@ -117,17 +102,10 @@ async def fill_bibtex(pub):
 
 
 async def get_version_urls(version_link):
-    # 依赖于scholarly
-    nav = getattr(scholarly, '_Scholarly__nav')
-
-    from scholarly._navigator import Navigator
-    assert isinstance(nav, Navigator)
-
     # 借用nav对象方法，用代理爬取谷歌页面
+    nav = get_scholarly_nav()
     try:
         html = await asyncio.to_thread(nav._get_page, version_link, True)
-    except asyncio.CancelledError:
-        raise
     except Exception as e:
         # logger.debug(traceback.format_exc(chain=False))
         raise QueryScholarlyError(e)
@@ -146,33 +124,3 @@ async def get_version_urls(version_link):
             version_urls.append(url)
 
     return version_urls
-
-
-def alter_scholarly():
-    """
-    只能一次修改，否则方法会无限递归
-    """
-    from scholarly.publication_parser import PublicationParser
-    _scholar_pub = getattr(PublicationParser, '_scholar_pub')  # 保存原先方法
-
-    def _new_scholar_pub(self, __data, publication: Publication):
-        # logger.info(f'succeed to hijack {self}._scholar_pub')
-        # 调用原有函数
-        publication = _scholar_pub(self, __data, publication)
-        # 补充数据
-        databox = __data.find('div', class_='gs_ri')
-        lowerlinks = databox.find('div', class_='gs_fl').find_all('a')
-        for link in lowerlinks:
-            if 'version' in link.text:
-                publication['version_link'] = link['href']
-
-        publication.setdefault('version_link', None)
-        return publication
-
-    # 使用反射修改类的方法
-    setattr(PublicationParser, '_scholar_pub', _new_scholar_pub)
-
-
-# 代码加载时
-if api_config.scholarly_alter_code:
-    alter_scholarly()

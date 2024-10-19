@@ -1,6 +1,6 @@
 import asyncio
 
-from tools.llm_tools import ask_gpt_async
+from llm.llm_tool import ask_gpt_async
 
 
 class AskGpt:

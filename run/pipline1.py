@@ -1,7 +1,4 @@
 import logging
-import asyncio.subprocess
-
-import websockets
 
 
 class QueryItem:
@@ -27,8 +24,6 @@ class QueryItem:
 class RunnerConfig:
     logger: logging.Logger
     item: QueryItem
-    websocket: websockets.WebSocketClientProtocol
-    node_process: asyncio.subprocess.Process
 
 
 class ReadResult:

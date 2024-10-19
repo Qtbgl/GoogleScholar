@@ -5,6 +5,7 @@ from llm.AskGpt import AskGpt
 
 class GptDoHtml(AskGpt):
     def __init__(self, logger):
+        super().__init__()
         self.logger = logger
 
     async def get_abstract(self, html_str):
