@@ -29,6 +29,7 @@ class Runner1(ReadResult, WriteResult):
         # 依赖对象
         self.config = config
         self.result = Result()
+        self.multi_consumer = 20  # 设置异步爬取数
 
     async def finish(self):
         logger = self.config.logger
@@ -38,8 +39,9 @@ class Runner1(ReadResult, WriteResult):
         logger.info(f'任务查询 {item}')
         self.result.set_pages(item.pages)
         scraper = ScrapePub1(self.config, self)
-        tasks = [scraper.producer()] + [scraper.consumer() for i in range(5)]
-        tasks = map(asyncio.create_task, tasks)
+        # 一个生产者 + 多个消费者
+        tasks = [scraper.producer()] + [scraper.consumer() for i in range(self.multi_consumer)]
+        tasks = list(map(asyncio.create_task, tasks))  # debug map只会遍历一次
         try:
             await asyncio.gather(*tasks)
         except QueryScholarlyError as e:
