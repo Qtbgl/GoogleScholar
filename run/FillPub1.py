@@ -5,7 +5,7 @@ from spider import AsyncSpider
 
 from crawl.by_scholarly import fill_bibtex
 from llm.AskGpt import AskGpt
-from llm.gpt_do_page_text import process_html
+from llm.process_html_for_gpt import process_html
 from run.context1 import RunnerConfig
 from run.pipline1 import WriteResult
 from data import api_config
@@ -67,6 +67,12 @@ class FillPub1:
             gpt = AskGpt(timeout=60)
             # 访问GPT，提取结果
             web_txt = process_html(html_str)
+            # 限制token
+            max_len = 4 * 64000  # 最长支持128000个token
+            if len(web_txt) > max_len:
+                web_txt = web_txt[:max_len] + ' ...'
+                logger.debug(f'截断web_txt太长的部分 {len(web_txt)} {page_url}')
+
             query_txt = '\n'.join([
                 '以下是一段不完整的摘要：', str(cut),
                 '以下是该文章/出版物的网页内容：', web_txt,

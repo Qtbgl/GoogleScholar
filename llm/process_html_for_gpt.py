@@ -38,8 +38,10 @@ def extract_js_strings(js_code):
 def process_html(html_str):
     root = BeautifulSoup(html_str, 'html.parser')
     # 删除 <style> 标签
-    for style_tag in root.find_all('style'):
-        style_tag.decompose()
+    for tag in root.find_all('style'):
+        tag.decompose()
+    for tag in root.find_all('svg'):  # svg图标有时包括太长数据
+        tag.decompose()
 
     # 删减 <script> 标签
     for script_tag in root.find_all('script'):
