@@ -32,7 +32,7 @@ class FillPub1:
             logger.debug(f'摘要任务成功 #{task_id}')
         except QuitAbstract as e:
             logger.error(f'摘要任务失败 {e} #{task_id}')
-            self.writer.mark_error(pub, '爬取摘要失败')
+            self.writer.mark_error(pub, f'爬取摘要失败: {e}')
             # 吸收此类型异常
         except asyncio.CancelledError:
             logger.debug(f'取消摘要任务 #{task_id}')
@@ -68,10 +68,10 @@ class FillPub1:
             # 访问GPT，提取结果
             web_txt = process_html(html_str)
             # 限制token
-            max_len = 4 * 64000  # 最长支持128000个token
+            max_len = 2 * 64000  # 最长支持128000个token，每个token > 2字符
             if len(web_txt) > max_len:
+                logger.debug(f'截断web_txt {len(web_txt)} 太长的部分 #{pub["task_id"]}')
                 web_txt = web_txt[:max_len] + ' ...'
-                logger.debug(f'截断web_txt太长的部分 {len(web_txt)} {page_url}')
 
             query_txt = '\n'.join([
                 '以下是一段不完整的摘要：', str(cut),
@@ -97,5 +97,5 @@ class FillPub1:
             raise
         except Exception as e:
             logger.error(f'bibtex获取失败 {e}')
-            self.writer.mark_error(pub, 'bibtex获取失败')
+            self.writer.mark_error(pub, f'bibtex获取失败: {e}')
             # 不抛出

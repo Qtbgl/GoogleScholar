@@ -76,6 +76,8 @@ class Runner1(ReadResult, WriteResult):
         # 缺省值
         empty_bib = {'link': None, 'string': None}
         results = []
+        # 先排序
+        all_pubs.sort(key=lambda x: x['task_id'])
         # 所有已有的结果
         for pub in all_pubs:
             abstract = pub.get('abstract')
