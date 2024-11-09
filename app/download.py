@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import Path, WebSocket
+from starlette.responses import FileResponse
 from starlette.websockets import WebSocketDisconnect
 import asyncio
 import traceback
@@ -43,3 +44,15 @@ async def run_task(websocket, config):
         await websocket.send_json({'result': result})
     except Exception as e:
         raise GoodbyeBecauseOfError(e)
+
+
+# 文件下载接口
+@app.get("/download/get/{file_remote}")
+async def download_get(file_remote: str):
+    from app.api_tool import project_root
+    import os
+    file_path = os.path.join(project_root, 'data', 'download', file_remote)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    else:
+        return {"error": "File not found"}
