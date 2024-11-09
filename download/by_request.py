@@ -12,11 +12,10 @@ class ByRequest:
         self.config = config
         self.save_dir = os.path.join(config.root_path, 'data', 'download')
         os.makedirs(self.save_dir, exist_ok=True)
-        print(self.save_dir)  # test
 
     def _save(self, data):
         name = make_uname_for_file()
-        with open(name, 'wb') as f:
+        with open(os.path.join(self.save_dir, name), 'wb') as f:
             f.write(data)
         return name
 

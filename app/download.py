@@ -17,11 +17,6 @@ async def download(websocket: WebSocket):
     await websocket.accept()
     logger = create_logger("download", datetime.now())
     logger.info(f'/download 新连接 {websocket.url}')
-
-    async def goodbye(msg_obj: dict):
-        await websocket.send_json(msg_obj)
-        await websocket.close()
-
     try:
         obj = await websocket.receive_json()
         config = await initialize_config(obj, logger)
@@ -29,7 +24,7 @@ async def download(websocket: WebSocket):
             await run_task(websocket, config)
 
     except GoodbyeBecauseOfError as e:
-        await goodbye({'error': str(e)})
+        await websocket.send_json({'error': str(e)})
     except WebSocketDisconnect as e:
         logger.error(f"/download 意外断开连接 {e}")
     except Exception as e:
