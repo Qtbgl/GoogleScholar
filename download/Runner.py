@@ -2,11 +2,11 @@ import asyncio
 import traceback
 
 from download.by_request import ByRequest
-from download.context import DownloadConfig
+from download.context import Config
 
 
 class Runner:
-    def __init__(self, config: DownloadConfig):
+    def __init__(self, config: Config):
         # 依赖对象
         self.config = config
 
@@ -25,7 +25,7 @@ class Runner:
 
         result = [{
             'url': pub['url'],
-            'remote': pub.get('remote'),  # 服务器端索引id（如url的唯一变换码）
+            'file_remote': pub.get('file'),  # 文件取回名
             'error': pub.get('error'),
         } for pub in pubs]
         return result

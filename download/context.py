@@ -1,13 +1,14 @@
 import logging
 
+from app.api_tool import project_root
 from app.params_tool import param_check, check_key, get_int, get_bool, ParamError
 from data import api_config
 
 
-class DownloadConfig:
+class Config:
     logger: logging.Logger
     pubs: list[dir]
-    save_dir: str
+    root_path: str
 
     async def __aenter__(self):
         pass
@@ -17,11 +18,11 @@ class DownloadConfig:
 
 
 async def initialize_config(obj, logger):
-    config = DownloadConfig()
+    config = Config()
     config.logger = logger
     try:
         config.pubs = parse_params(obj)
-        config.save_dir = ...
+        config.root_path = project_root
     except ParamError as e:
         raise GoodbyeBecauseOfError(f"api参数异常 {e}")
     except Exception as e:

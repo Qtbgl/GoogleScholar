@@ -1,27 +1,36 @@
+import os.path
+
 import aiohttp
 from aiohttp import ClientResponseError
 
-from download.context import DownloadConfig
+from download.context import Config
+from download.download_tool import make_uname_for_file
 
 
 class ByRequest:
-    def __init__(self, config: DownloadConfig):
+    def __init__(self, config: Config):
         self.config = config
+        self.save_dir = os.path.join(config.root_path, 'data', 'download')
+        os.makedirs(self.save_dir, exist_ok=True)
+        print(self.save_dir)  # test
+
+    def _save(self, data):
+        name = make_uname_for_file()
+        with open(name, 'wb') as f:
+            f.write(data)
+        return name
 
     async def download_pdf(self, pub):
         logger = self.config.logger
         url = pub['url']
-        filename = ...
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 try:
                     response.raise_for_status()
-                    with open(filename, 'wb') as f:
-                        f.write(await response.read())
-                        logger.debug(f'下载完成 {url}')
+                    pub['file'] = self._save(await response.read())
+                    logger.debug(f'下载完成 {url}')
 
-                    pub['remote'] = filename  # 服务器端索引id（如url的唯一变换码）
                     # 还可以加入更多的信息，如文件大小，是否pdf等
 
                 except ClientResponseError as cre:
