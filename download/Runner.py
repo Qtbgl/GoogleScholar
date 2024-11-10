@@ -22,6 +22,11 @@ class Runner:
         except Exception as e:
             logger.error('未预料的异常' + '\n' + traceback.format_exc())
             raise e
+        finally:
+            for task in tasks:
+                task.cancel()  # 取消未完成的任务
+            await asyncio.gather(*tasks, return_exceptions=True)
+            logger.debug(f'所有下载任务已结束')
 
         result = [{
             'url': pub['url'],
