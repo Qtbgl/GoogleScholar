@@ -13,7 +13,7 @@ def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
         scraped_data = spider.scrape_url(url)
         item = scraped_data[0]
     except Exception as e:
-        raise Exception(f'spider-cloud爬取出错 {url} {e}') from e
+        raise Exception(f'spider-cloud爬取出错 {e} {url}') from e
 
     if item['error'] or item['status'] != 200:
         raise Exception(f"spider爬取出错: {item['status']}, {item['error']}")
