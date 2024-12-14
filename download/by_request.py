@@ -23,7 +23,7 @@ class ByRequest:
         logger = self.config.logger
         url = pub['url']
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession() as session:  # 计划: 流式/分块下载（但一般文件不会太大）
             async with session.get(url) as response:
                 try:
                     response.raise_for_status()

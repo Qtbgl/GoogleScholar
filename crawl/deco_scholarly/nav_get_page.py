@@ -9,8 +9,12 @@ spider = Spider(api_key=api_config.spider_api_key)
 def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
     # print(f'hack in {self}._get_page, {pagerequest} {premium}')
     url = pagerequest
-    scraped_data = spider.scrape_url(url)
-    item = scraped_data[0]
+    try:
+        scraped_data = spider.scrape_url(url)
+        item = scraped_data[0]
+    except Exception as e:
+        raise Exception(f'spider-cloud爬取出错 {url} {e}') from e
+
     if item['error'] or item['status'] != 200:
         raise Exception(f"spider爬取出错: {item['status']}, {item['error']}")
 
