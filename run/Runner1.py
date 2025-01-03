@@ -45,7 +45,7 @@ class Runner1(ReadResult, WriteResult):
         try:
             await asyncio.gather(*tasks)
         except QueryScholarlyError as e:
-            logger.error(f'scholarly异常 {traceback.format_exc()}')
+            logger.error(f'scholarly执行异常 {traceback.format_exc()}')
             raise e
         except Exception as e:
             logger.error(f'未知异常 {traceback.format_exc()}')
