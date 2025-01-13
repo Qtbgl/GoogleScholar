@@ -56,11 +56,17 @@ class FillPub1:
         title = pub['title']
         cut = pub['cut']
         item = None
-        async for data in spider.scrape_url(page_url):
-            item = data[0]
+        # spider-cloud请求超时处理
+        try:
+            async for data in spider.scrape_url(page_url):
+                item = data[0]
+        except asyncio.TimeoutError as e:
+            raise QuitAbstract(f'spider-cloud请求超时 {e}')
 
-        if item['error'] or item['status'] != 200:
-            raise QuitAbstract(f"spider爬取失败: {item['status']}, {item['error']}")
+        if item['error']:  # 具体区分spider的错误
+            raise Exception(f"spider-cloud自身访问出错 {item['error']}")
+        elif not (200 <= item['status'] < 300):
+            raise Exception(f"spider-cloud爬取页面失败, status: {item['status']}, url: {item['url']}")
 
         try:
             html_str = item['content']

@@ -20,14 +20,10 @@ def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
 
     # spider-cloud访问不出错，但爬取目标网页也会error
     if item['error']:
-        raise Exception(f"spider-cloud爬取出错 {item}")
+        raise Exception(f"spider-cloud自身访问出错 {item['error']}")
     elif not (200 <= item['status'] < 300):
-        # 此时item.error为空，但目标网页的爬取有误
-        content = item.get('content')
-        if len(content) > 40:
-            content = content[:40] + ' ...'
-
-        raise Exception(f"spider-cloud爬取失败, status: {item['status']}, url: {item['url']}, content: {content}")
+        # 此时item.error为空，但目标网页的爬取有误..'
+        raise Exception(f"spider-cloud爬取页面失败, status: {item['status']}, url: {item['url']}")
 
     # print(item['url'], item['status'], item['costs'])
     return item['content']
