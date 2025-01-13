@@ -28,6 +28,13 @@ async def query1(
     try:
         obj = await websocket.receive_json()
         config = await initialize_config(name, obj, logger)
+        # 传入openai的密钥
+        if obj.get('openai_api_base') and obj.get('openai_api_key'):
+            import openai
+            logger.info(f'更改openai的密钥, 不打印细节')
+            openai.api_base = obj.get('openai_api_base')
+            openai.api_key = obj.get('openai_api_key')
+            obj['openai_api_key'] = '*****'  # 隐蔽密钥
         async with config:
             await run_task(websocket, config)
 
