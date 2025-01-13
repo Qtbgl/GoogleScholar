@@ -36,6 +36,7 @@ class FillPub1:
             # 吸收此类型异常
         except asyncio.CancelledError:
             logger.debug(f'取消摘要任务 #{task_id}')
+            self.writer.mark_error(pub, f'取消摘要任务 #{task_id}')
             raise
         except Exception as e:
             logger.error(f'摘要任务失败 {type(e)} {e} #{task_id}')
@@ -64,9 +65,9 @@ class FillPub1:
             raise QuitAbstract(f'spider-cloud请求超时 {e}')
 
         if item['error']:  # 具体区分spider的错误
-            raise Exception(f"spider-cloud自身访问出错 {item['error']}")
+            raise QuitAbstract(f"spider-cloud自身访问出错 {item['error']}")
         elif not (200 <= item['status'] < 300):
-            raise Exception(f"spider-cloud爬取页面失败, status: {item['status']}, url: {item['url']}")
+            raise QuitAbstract(f"spider-cloud爬取页面失败, status: {item['status']}, url: {item['url']}")
 
         try:
             html_str = item['content']
@@ -100,6 +101,7 @@ class FillPub1:
             logger.debug(f'bibtex任务成功 #{task_id}')
         except asyncio.CancelledError:
             logger.info(f'取消bibtex任务 #{task_id}')
+            self.writer.mark_error(pub, f'取消bibtex任务 #{task_id}')
             raise
         except Exception as e:
             logger.error(f'bibtex获取失败 {e}')
