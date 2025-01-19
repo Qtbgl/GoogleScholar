@@ -1,24 +1,66 @@
 import asyncio
+import logging
 import traceback
 
-from download.by_request import ByRequest
-from download.context import Config
+import download.by_pdf_link as by_link
+import download.by_scihub as by_scihub
+from download.common_tool import get_errs_info
+
+
+class TaskConfig:
+    logger: logging.Logger
+    quests: list[dir]
+    pdf_save_dir: str
 
 
 class Runner:
-    def __init__(self, config: Config):
+    def __init__(self, config: TaskConfig):
         # 依赖对象
         self.config = config
+
+    async def get_pdf(self, quest):
+        save_dir = self.config.pdf_save_dir
+        logger = self.config.logger
+        errs = ()
+        if quest.get('eprint_url'):
+            # 尝试直接爬取链接
+            try:
+                saved_name = by_link.download_pdf(quest.get('eprint_url'), save_dir, logger)
+                return {
+                    'file_remote': saved_name,
+                    'task_id': quest['task_id'],
+                    'get_by': 'eprint_url',
+                }
+            except by_link.DownloadFailed as e:
+                errs += (e,)
+
+        if quest.get('title'):
+            # 尝试从sci-hub上找相同的标题
+            try:
+                name = by_scihub.download_pdf(quest.get('title'), 'title', save_dir, logger)
+                return {
+                    'file_remote': name,
+                    'task_id': quest['task_id'],
+                    'get_by': 'title_sci-hub',
+                }
+            except by_link.DownloadFailed as e:
+                errs += (e,)
+
+        # 未成功下载
+        return {
+            'task_id': quest['task_id'],
+            'error': get_errs_info(errs)
+        }
 
     async def finish(self):
         logger = self.config.logger
         logger.info(f'开始下载任务')
-        pubs = self.config.pubs
-        by = ByRequest(self.config)
-        tasks = [by.download_pdf(pub) for pub in pubs]
+        quests = self.config.quests
+        tasks = [self.get_pdf(q) for q in quests]
         tasks = list(map(asyncio.create_task, tasks))
         try:
-            await asyncio.gather(*tasks)
+            result = await asyncio.gather(*tasks)  # 结果返回
+            return result
         except Exception as e:
             logger.error('未预料的异常' + '\n' + traceback.format_exc())
             raise e
@@ -27,10 +69,3 @@ class Runner:
                 task.cancel()  # 取消未完成的任务
             await asyncio.gather(*tasks, return_exceptions=True)
             logger.debug(f'所有下载任务已结束')
-
-        result = [{
-            'url': pub['url'],
-            'file_remote': pub.get('file'),  # 文件取回名
-            'error': pub.get('error'),
-        } for pub in pubs]
-        return result
