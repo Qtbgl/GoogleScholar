@@ -9,7 +9,7 @@ from download.common_tool import get_errs_info
 
 class TaskConfig:
     logger: logging.Logger
-    quests: list[dir]
+    quests: list[dict]
     pdf_save_dir: str
 
 
@@ -28,7 +28,7 @@ class Runner:
                 saved_name = by_link.download_pdf(quest.get('eprint_url'), save_dir, logger)
                 return {
                     'file_remote': saved_name,
-                    'task_id': quest['task_id'],
+                    'quest_id': quest['quest_id'],
                     'get_by': 'eprint_url',
                 }
             except by_link.DownloadFailed as e:
@@ -40,7 +40,7 @@ class Runner:
                 name = by_scihub.download_pdf(quest.get('title'), 'title', save_dir, logger)
                 return {
                     'file_remote': name,
-                    'task_id': quest['task_id'],
+                    'quest_id': quest['quest_id'],
                     'get_by': 'title_sci-hub',
                 }
             except by_link.DownloadFailed as e:
@@ -48,7 +48,7 @@ class Runner:
 
         # 未成功下载
         return {
-            'task_id': quest['task_id'],
+            'quest_id': quest['quest_id'],
             'error': get_errs_info(errs)
         }
 

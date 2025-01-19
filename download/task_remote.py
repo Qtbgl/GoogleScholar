@@ -44,7 +44,7 @@ def parse_params(obj):
     """Parse input parameters from the WebSocket message."""
     check_key(obj)
     for q in obj['quests']:
-        assert q['quest_id']
+        assert q['quest_id'] is not None
         # 确保有下载链接
         assert q['eprint_url'] or q['title']
 
