@@ -31,7 +31,8 @@ async def init_config(obj, logger):
         os.makedirs(save_dir, exist_ok=True)
         config.pdf_save_dir = save_dir
     except ParamError as e:
-        raise GoodbyeBecauseOfError(f"api参数异常 {e}")
+        logger.error(f"传入参数解析出错 {e}")
+        raise GoodbyeBecauseOfError(f"传入参数解析出错 {e}")
     except Exception as e:
         logger.error(f'初始化时异常 {type(e)} {e}')
         raise GoodbyeBecauseOfError(e)
@@ -43,9 +44,10 @@ async def init_config(obj, logger):
 def parse_params(obj):
     """Parse input parameters from the WebSocket message."""
     check_key(obj)
+    assert obj['quests'], '下载请求为空'
     for q in obj['quests']:
-        assert q['quest_id'] is not None
+        assert q['quest_id'] is not None, '下载请求编号为空'
         # 确保有下载链接
-        assert q['eprint_url'] or q['title']
+        assert q.get('eprint_url') or q.get('title'), '下载信息为空'
 
     return obj['quests']
