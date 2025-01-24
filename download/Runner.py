@@ -2,8 +2,7 @@ import asyncio
 import logging
 import traceback
 
-import download.by_pdf_link as by_link
-import download.by_scihub as by_scihub
+from download.by_pdf_link import ByPdfLink
 from download.common_tool import get_errs_info
 
 
@@ -22,34 +21,35 @@ class Runner:
         save_dir = self.config.pdf_save_dir
         logger = self.config.logger
         errs = ()
+        # 尝试直接爬取链接
         if quest.get('eprint_url'):
-            # 尝试直接爬取链接
-            try:
-                saved_name = by_link.download_pdf(quest.get('eprint_url'), save_dir, logger)
-                return {
-                    'file_remote': saved_name,
-                    'quest_id': quest['quest_id'],
-                    'get_by': 'eprint_url',
-                }
-            except by_link.DownloadFailed as e:
-                errs += (e,)
+            by_link = ByPdfLink(quest.get('eprint_url'), save_dir, logger)
+            await by_link.download()
+            if by_link.succeed:
+                return by_link.get_result(quest['quest_id'])
+            else:
+                errs += (by_link.err,)
 
-        if quest.get('title'):
-            # 尝试从sci-hub上找相同的标题
-            try:
-                name = by_scihub.download_pdf(quest.get('title'), 'title', save_dir, logger)
-                return {
-                    'file_remote': name,
-                    'quest_id': quest['quest_id'],
-                    'get_by': 'title_sci-hub',
-                }
-            except by_link.DownloadFailed as e:
-                errs += (e,)
+        # # 尝试从sci-hub上找相同的标题
+        # if quest.get('title'):
+        #     try:
+        #         name = by_scihub.download_pdf(quest.get('title'), 'title', save_dir, logger)
+        #         return {
+        #             'file_remote': name,
+        #             'quest_id': quest['quest_id'],
+        #             'get_by': 'title_sci-hub',
+        #         }
+        #     except by_scihub.DownloadFailed as e:
+        #         errs += (e,)
+
+        # 其他方式，如针对特定的网站解决
+        # if quest.get('pub_url')
+
 
         # 未成功下载
         return {
             'quest_id': quest['quest_id'],
-            'error': get_errs_info(errs)
+            'error': get_errs_info(errs) if len(errs) else '缺乏足够信息来获取pdf'
         }
 
     async def finish(self):

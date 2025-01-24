@@ -31,3 +31,42 @@ async def download_pdf(pdf_url, save_dir, logger):
 
 class DownloadFailed(Exception):
     pass
+
+
+class ByPdfLink:
+    def __init__(self, pdf_url, save_dir, logger):
+        self.save_dir = save_dir
+        self.logger = logger
+        self.pdf_url = pdf_url
+        # 下载结果
+        self._saved_name = None
+        self._succeed = None
+        self._err = None
+
+    async def download(self, ):
+        try:
+            self._saved_name = await download_pdf(self.pdf_url, self.save_dir, self.logger)
+            self._succeed = True
+        except DownloadFailed as e:
+            self._succeed = False
+            self._err = e
+
+        return self._succeed
+
+    @property
+    def succeed(self):
+        assert self._succeed is not None, '还没下载呢'
+        return self._succeed
+
+    def get_result(self, quest_id):
+        assert self._succeed, '没有下载成功'
+        return {
+            'file_remote': self._saved_name,
+            'quest_id': quest_id,
+            'get_by': 'PDF链接直接下载',
+        }
+
+    @property
+    def err(self):
+        assert self._succeed is not None, '还没下载呢'
+        return self._err
