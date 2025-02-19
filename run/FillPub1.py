@@ -60,7 +60,17 @@ class FillPub1:
         # spider-cloud请求超时处理
         try:
             async for data in spider.scrape_url(page_url):
-                item = data[0]
+                if isinstance(data, list) and len(data) == 1:
+                    item = data[0]
+                else:
+                    if not isinstance(data, list):
+                        logger.error(f'spider.scrape_url返回不是list {data}')
+                    elif len(data) == 0:
+                        logger.error(f'spider.scrape_url返回list为空 {data}')
+                    elif len(data) > 1:
+                        logger.error(f'spider.scrape_url返回list长度多余 {data}')
+                    raise Exception(f'spider.scrape_url返回结果异常')
+
         except asyncio.TimeoutError as e:
             raise QuitAbstract(f'spider-cloud请求超时 {e}')
 
