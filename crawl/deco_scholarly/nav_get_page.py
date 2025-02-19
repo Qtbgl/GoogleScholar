@@ -9,7 +9,7 @@ spider = Spider(api_key=api_config.spider_api_key)
 def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
     # print(f'hack in {self}._get_page, {pagerequest} {premium}')
     if not pagerequest:
-        raise Exception(f'网页请求为空, {self}._get_page, {pagerequest}')
+        raise Exception(f'网页请求为空, {pagerequest}, on {self}._get_page')
 
     url = pagerequest
     try:

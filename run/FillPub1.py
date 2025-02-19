@@ -69,7 +69,7 @@ class FillPub1:
                         logger.error(f'spider.scrape_url返回list为空 {data}')
                     elif len(data) > 1:
                         logger.error(f'spider.scrape_url返回list长度多余 {data}')
-                    raise Exception(f'spider.scrape_url返回结果异常')
+                    raise Exception(f'spider.scrape_url返回结果异常 {page_url}')
 
         except asyncio.TimeoutError as e:
             raise QuitAbstract(f'spider-cloud请求超时 {e}')
@@ -114,6 +114,6 @@ class FillPub1:
             self.writer.mark_error(pub, f'取消bibtex任务 #{task_id}')
             raise
         except Exception as e:
-            logger.error(f'bibtex获取失败 {e}')
+            logger.error(f'bibtex获取失败 #{task_id} {e}')
             self.writer.mark_error(pub, f'bibtex获取失败: {e}')
             # 不抛出

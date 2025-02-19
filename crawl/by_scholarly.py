@@ -81,23 +81,35 @@ class SearchPubsAsync:
         return value
 
 
-def get_bib_link(pub):
-    raw_pub = pub.get('raw_pub')
-    if raw_pub is None:
-        return None
+def has_bib_link(pub):
+    raw_pub = pub['raw_pub']
+    if raw_pub.get('url_scholarbib', None):
+        return True
+    else:
+        return False
 
+
+def get_bib_link(pub):
+    """
+    如果 pub_raw中缺少相关链接，返回None
+    :param pub:
+    :return:
+    """
+    raw_pub = pub['raw_pub']
     base_url = 'https://scholar.google.com'
     return base_url + raw_pub['url_scholarbib'] if 'url_scholarbib' in raw_pub else None
 
 
 async def fill_bibtex(pub):
-    pub['BibTeX'] = {'link': None, 'string': None}
+    pub['BibTeX'] = {'link': None, 'string': None}  # 赋值默认
 
     # 通过原始pub对象获取
-    raw_pub = pub['raw_pub']
-    pub['BibTeX']['link'] = get_bib_link(raw_pub)
+    if not has_bib_link(pub):
+        raise Exception('scholarly未能获得谷歌学术上的bib链接（可能是此文章无bib）')
 
-    bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
+    pub['BibTeX']['link'] = get_bib_link(pub)  # debug 要传入pub不是raw_pub
+
+    bib_str = await asyncio.to_thread(scholarly.bibtex, pub['raw_pub'])
     pub['BibTeX']['string'] = bib_str
 
 
