@@ -21,3 +21,4 @@ def _new_get_bibtex(self, bib_url) -> str:
 
 # 使用反射修改类的方法
 setattr(PublicationParser, '_get_bibtex', _new_get_bibtex)
+print('scholarly已修改bibtex填充函数')

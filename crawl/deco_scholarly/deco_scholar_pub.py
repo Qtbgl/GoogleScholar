@@ -20,3 +20,4 @@ def _new_scholar_pub(self, __data, publication: Publication):
 
 # 使用反射修改类的方法
 setattr(PublicationParser, '_scholar_pub', _new_scholar_pub)
+print('scholarly已修改出版物填充方式')

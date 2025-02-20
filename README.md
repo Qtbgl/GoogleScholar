@@ -9,3 +9,10 @@ GoogleScholar下创建data目录，
 设置 scholarly_use_proxy = True
 
 设置scholarly_alter_code = True
+
+scholarly推荐从github中下载，避免更新停留在2023年
+```shell
+git clone -b develop https://github.com/scholarly-python-package/scholarly.git
+cd .\scholarly
+pip install .
+```

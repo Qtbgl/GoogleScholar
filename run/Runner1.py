@@ -29,7 +29,7 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
         tasks = [scraper.producer()] + [scraper.consumer() for i in range(self.multi_consumer)]
         tasks = list(map(asyncio.create_task, tasks))  # debug map只会遍历一次
         try:
-            logger.debug(f'开始所有（生产者，消费者）任务 {len(tasks)}')  # debugging 初始即结束问题
+            logger.debug(f'开始所有（生产者，消费者）任务数 {len(tasks)} 个')  # debugging 初始即结束问题
             await asyncio.gather(*tasks)
         except QueryScholarlyError as e:
             logger.error(f'scholarly执行异常 {traceback.format_exc()}')
