@@ -69,6 +69,7 @@ class ScrapePub1:
         try:
             # 等待所有任务完成
             await asyncio.gather(*tasks)
+            self.writer.mark_completed(pub)
         finally:
             for task in tasks:
                 task.cancel()
