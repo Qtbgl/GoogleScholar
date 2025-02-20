@@ -4,14 +4,14 @@ import traceback
 from crawl.by_scholarly import query_scholar
 from run.FillPub1 import FillPub1
 from run.context1 import RunnerConfig
-from run.pipline1 import WriteResult
+from run.pipline1 import LoggingPubCrawl
 from data import api_config
 
 from tools.log_display_tool import display_pub_url
 
 
 class ScrapePub1:
-    def __init__(self, config: RunnerConfig, writer: WriteResult):
+    def __init__(self, config: RunnerConfig, writer: LoggingPubCrawl):
         self.config = config
         self.writer = writer
         self._pub_queue = asyncio.Queue()  # 等待填充队列

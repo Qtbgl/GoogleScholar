@@ -8,7 +8,7 @@ from crawl.by_scholarly import fill_bibtex
 from llm.AskGpt import AskGpt
 from llm.process_html_for_gpt import process_html
 from run.context1 import RunnerConfig
-from run.pipline1 import WriteResult
+from run.pipline1 import LoggingPubCrawl
 from data import api_config
 
 
@@ -17,7 +17,7 @@ class QuitAbstract(Exception):
 
 
 class FillPub1:
-    def __init__(self, config: RunnerConfig, writer: WriteResult):
+    def __init__(self, config: RunnerConfig, writer: LoggingPubCrawl):
         self.config = config
         self.writer = writer
 
@@ -52,9 +52,9 @@ class FillPub1:
                 if isinstance(data, list) and len(data):
                     item = data[0]
                     if item['error']:  # 具体区分spider的错误
-                        raise QuitAbstract(f"spider接口自身访问出错 {item['error']}")
+                        raise QuitAbstract(f"spider接口访问出错 {item['error']}")
                     elif not (200 <= item['status'] < 300):
-                        raise QuitAbstract(f"spider接口代理爬取{item['status']} {item['url']}")
+                        raise QuitAbstract(f"spider接口爬取{item['status']} {item['url']}")
 
                     return item
                 else:
@@ -69,6 +69,8 @@ class FillPub1:
         """
         logger = self.config.logger
         page_url = pub['url']
+        if not page_url:
+            raise QuitAbstract('缺少网页地址')
 
         ps = urlparse(page_url)
         if 'pdf' in ps.path.lower():

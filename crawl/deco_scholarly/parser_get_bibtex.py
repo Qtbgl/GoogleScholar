@@ -13,7 +13,8 @@ def _new_get_bibtex(self, bib_url) -> str:
         for link in styles:
             if link.string.lower() == "bibtex":
                 return link.get('href')
-        if i < max_tries - 1:  # 下一次尝试
+        # 下一次尝试
+        if i < max_tries - 1:
             time.sleep(wait_time)
     raise Exception(f'各类引用中无法找到bibtex的链接 {bib_url}')
 

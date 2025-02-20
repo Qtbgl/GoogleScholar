@@ -18,7 +18,7 @@ class QueryItem:
         return str(self.__dict__)
 
 
-class ReadResult:
+class ReadCrawlProgress:
     def get_progress(self):
         pass
 
@@ -26,9 +26,12 @@ class ReadResult:
         pass
 
 
-class WriteResult:
+class LoggingPubCrawl:
     def register_new(self, pub):
         pass
 
     def mark_error(self, pub, error):
+        pass
+
+    def mark_completed(self, pub):
         pass

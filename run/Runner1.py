@@ -1,34 +1,20 @@
 import asyncio
 import traceback
+from collections import Counter
 
 from crawl.by_scholarly import QueryScholarlyError, get_bib_link
 from run.ScrapePub1 import ScrapePub1
 from run.context1 import RunnerConfig
-from run.pipline1 import ReadResult, WriteResult
+from run.pipline1 import ReadCrawlProgress, LoggingPubCrawl
 
 from tools.bib_tool import add_abstract, del_abstract
 
 
-class Result:
-    def __init__(self):
-        self.pages = None
-        self.all_pubs = []
-        self._i = 0
-
-    def set_pages(self, pages):
-        self.pages = pages
-
-    def next_id(self):
-        i = self._i
-        self._i += 1
-        return i
-
-
-class Runner1(ReadResult, WriteResult):
+class Runner1(ReadCrawlProgress, LoggingPubCrawl):
     def __init__(self, config: RunnerConfig):
         # 依赖对象
         self.config = config
-        self.result = Result()
+        self.result = CrawlResult()
         self.multi_consumer = 20  # 设置异步爬取数
 
     async def finish(self):
@@ -61,11 +47,19 @@ class Runner1(ReadResult, WriteResult):
 
     def get_progress(self):
         if not self.result.pages:
-            return 0.0
+            return None
 
-        total = 10 * self.result.pages
-        registered = len(self.result.all_pubs)
-        return registered / total
+        total_expect = 10 * self.result.pages
+        all_pubs = self.result.all_pubs
+        searched = len(all_pubs)
+        status_counter = Counter(pub['crawl_state'] for pub in all_pubs)
+        return {
+            'total_expect': total_expect,
+            'searched': searched,
+            'unfilled': status_counter['unfilled'],
+            'completed': status_counter['completed'],
+            'error_occurred': status_counter['error_occurred'],
+        }
 
     def deliver_pubs(self):
         all_pubs = self.result.all_pubs
@@ -117,7 +111,27 @@ class Runner1(ReadResult, WriteResult):
     def register_new(self, pub):
         pub['task_id'] = self.result.next_id()
         pub['error'] = []
+        pub['crawl_state'] = 'unfilled'
         self.result.all_pubs.append(pub)
 
     def mark_error(self, pub, error):
         pub['error'].append(error)
+        pub['crawl_state'] = 'error_occurred'
+
+    def mark_completed(self, pub):
+        pub['crawl_state'] = 'completed'
+
+
+class CrawlResult:
+    def __init__(self):
+        self.pages = None
+        self.all_pubs = []
+        self._i = 0
+
+    def set_pages(self, pages):
+        self.pages = pages
+
+    def next_id(self):
+        i = self._i
+        self._i += 1
+        return i

@@ -8,15 +8,20 @@ from run.pipline1 import QueryItem
 
 
 def parse_pub(json_obj):
+    """
+    不报错地解析
+    :param json_obj:
+    :return:
+    """
     pub = json_obj
-    author = ', '.join(pub['bib']['author'])
+    pub_bib = pub.get('bib', {})
     return {
-        'cut': pub['bib']['abstract'],
-        'url': pub['pub_url'],
-        'author': author,
-        'title': pub['bib']['title'],
-        'pub_year': pub['bib']['pub_year'],
-        'num_citations': pub['num_citations'],
+        'cut': pub_bib.get('abstract'),
+        'url': pub.get('pub_url'),
+        'author': ', '.join(pub_bib.get('author')),
+        'title': pub_bib.get('title'),
+        'pub_year': pub_bib.get('pub_year'),
+        'num_citations': pub.get('num_citations'),
         'eprint_url': pub.get('eprint_url'),
         'raw_pub': pub,
         'version_link': pub.get('version_link'),
