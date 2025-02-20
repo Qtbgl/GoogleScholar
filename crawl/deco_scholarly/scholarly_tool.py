@@ -24,15 +24,16 @@ def get_scholarly_nav():
     return nav
 
 
-# 代码加载时
-if api_config.deco_scholarly:
-    if 'parser_scholar_pub' in api_config.deco_scholarly:
-        import crawl.deco_scholarly.parser_scholar_pub
-    if 'nav_get_page' in api_config.deco_scholarly:
-        import crawl.deco_scholarly.nav_get_page
+# 直接加载，不用判断 —— 2025/2/20
+# # 代码加载时
+# if api_config.deco_scholarly:
+#     if 'parser_scholar_pub' in api_config.deco_scholarly:
+#         import crawl.deco_scholarly.parser_scholar_pub
+#     if 'nav_get_page' in api_config.deco_scholarly:
+#         import crawl.deco_scholarly.nav_get_page
 
 
-__all__ = ['scholarly', 'get_scholarly_nav', 'use_proxy', 'ScholarlyUseProxy']
+# __all__ = ['scholarly', 'get_scholarly_nav', 'use_proxy', 'ScholarlyUseProxy']
 
 
 class ScholarlyUseProxy:

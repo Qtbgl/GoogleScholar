@@ -1,9 +1,8 @@
 import asyncio
-import traceback
 
 from bs4 import BeautifulSoup
 
-from crawl.scholarly_tool import scholarly, get_scholarly_nav
+from crawl.deco_scholarly import scholarly, get_scholarly_nav
 from run.pipline1 import QueryItem
 
 
