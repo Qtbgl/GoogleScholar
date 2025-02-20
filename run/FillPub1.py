@@ -2,6 +2,7 @@ import asyncio
 import traceback
 
 from spider import AsyncSpider
+from urllib.parse import urlparse
 
 from crawl.by_scholarly import fill_bibtex
 from llm.AskGpt import AskGpt
@@ -42,42 +43,48 @@ class FillPub1:
             logger.error(f'摘要任务失败 {type(e)} {e} #{task_id}')
             raise
 
+    async def _scrape_url(self, url, max_tries=2):
+        logger = self.config.logger
+        spider = self.config.spider
+
+        for i in range(max_tries):
+            async for data in spider.scrape_url(url):
+                if isinstance(data, list) and len(data):
+                    item = data[0]
+                    if item['error']:  # 具体区分spider的错误
+                        raise QuitAbstract(f"spider接口自身访问出错 {item['error']}")
+                    elif not (200 <= item['status'] < 300):
+                        raise QuitAbstract(f"spider接口代理爬取{item['status']} {item['url']}")
+
+                    return item
+                else:
+                    logger.error(f'spider.scrape_url返回结果异常 尝试{i} {data}')
+
+        raise QuitAbstract(f'spider.scrape_url返回结果异常 {url}')
+
     async def _fill_abstract(self, pub):
         """
         等待时间: spider未知
         GPT询问时间: 不超过60s
         """
         logger = self.config.logger
-        spider = self.config.spider
         page_url = pub['url']
 
-        if 'pdf' in page_url.lower():
-            raise QuitAbstract('网页是pdf')
+        ps = urlparse(page_url)
+        if 'pdf' in ps.path.lower():
+            raise QuitAbstract('网页是pdf请直接下载')
+        if 'sciencedirect.com' in ps.netloc:
+            raise QuitAbstract('sciencedirect网站反爬')
+        if 'ieee.org' in ps.netloc:
+            raise QuitAbstract('ieee网站需要浏览器上加载')
 
-        title = pub['title']
+        # title = pub['title']
         cut = pub['cut']
-        item = None
         # spider-cloud请求超时处理
         try:
-            async for data in spider.scrape_url(page_url):
-                if isinstance(data, list) and len(data) == 1:
-                    item = data[0]
-                else:
-                    if not isinstance(data, list):
-                        logger.error(f'spider.scrape_url返回不是list {data}')
-                    elif len(data) == 0:
-                        logger.error(f'spider.scrape_url返回list为空 {data}')
-                    elif len(data) > 1:
-                        logger.error(f'spider.scrape_url返回list长度多余 {data}')
-                    raise Exception(f'spider.scrape_url返回结果异常 {page_url}')
-
+            item = await self._scrape_url(page_url, 2)
         except asyncio.TimeoutError as e:
             raise QuitAbstract(f'spider-cloud请求超时 {e}')
-
-        if item['error']:  # 具体区分spider的错误
-            raise QuitAbstract(f"spider-cloud自身访问出错 {item['error']}")
-        elif not (200 <= item['status'] < 300):
-            raise QuitAbstract(f"spider-cloud爬取页面失败, status: {item['status']}, url: {item['url']}")
 
         try:
             html_str = item['content']
