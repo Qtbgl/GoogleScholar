@@ -11,6 +11,11 @@ logger.addHandler(console_handler)
 # 再加载scholarly模块
 from scholarly import scholarly
 
+# 修改scholarly中的方法
+import crawl.deco_scholarly.deco_scholar_pub
+import crawl.deco_scholarly.deco_get_page
+import crawl.deco_scholarly.deco_get_bibtex
+
 # 其他相关的工具方法
 from crawl.deco_scholarly.scholarly_tool import get_scholarly_nav, use_proxy, ScholarlyUseProxy
 
