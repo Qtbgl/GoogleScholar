@@ -29,6 +29,7 @@ class ScrapePub1:
                 logger.debug(f'新搜索到的文献 {display_pub_url(pubs)}')
 
             await queue.put(None)  # 放入特殊标记，表示结束
+            logger.debug(f'生产者队列已标记结束')
         except asyncio.CancelledError:
             logger.debug(f'生产者传递取消异常')
             raise

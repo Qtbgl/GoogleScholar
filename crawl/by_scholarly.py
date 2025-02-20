@@ -73,12 +73,15 @@ class SearchPubsAsync:
     def next_to_anext(self):
         try:
             if self.q is None:
-                self.init_q()
+                print('debug 开始初始调用scholarly.search_pubs')
+                self.init_q()  # scholarly生成器在初始时，就会爬第一批出版物
 
             return next(self.q)
         except StopIteration:
+            print('debug 结束了scholarly.search_pubs')
             raise StopAsyncIteration  # 异步退出信号
         except Exception as e:
+            print('debug 出错了scholarly.search_pubs', e)
             raise QueryScholarlyError(e)
 
     async def __anext__(self):
