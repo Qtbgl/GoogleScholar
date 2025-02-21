@@ -8,6 +8,7 @@ from run.context1 import RunnerConfig
 from run.pipline1 import ReadCrawlProgress, LoggingPubCrawl
 
 from tools.bib_tool import add_abstract, del_abstract
+from data import api_config
 
 
 class Runner1(ReadCrawlProgress, LoggingPubCrawl):
@@ -16,6 +17,8 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
         self.config = config
         self.result = CrawlResult()
         self.multi_consumer = 20  # 设置异步爬取数
+        if 'multi_consumer' in dir(api_config):
+            self.multi_consumer = api_config.multi_consumer
 
     async def finish(self):
         logger = self.config.logger
