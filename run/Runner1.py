@@ -57,6 +57,9 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
             except QueryScholarlyError as e:
                 logger.error(f'scholarly执行异常 {traceback.format_exc()}')
                 error_pot.append(e)
+            if not completed:
+                tasks = [ts for ts in tasks if not ts.done()]  # debug
+
         return error_pot
 
     def get_progress(self):
