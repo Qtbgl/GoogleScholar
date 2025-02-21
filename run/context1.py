@@ -52,4 +52,5 @@ def parse_params(name, obj):
     item.year_high = get_int(obj, 'year_high', a=1900, b=2024)
     item.min_cite = get_int(obj, 'min_cite')
     item.ignore_bibtex = get_bool(obj, 'ignore_bibtex', default=False)
+    item.ignore_abstract = get_bool(obj, 'ignore_abstract', default=False)
     return item

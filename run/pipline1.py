@@ -5,6 +5,7 @@ class QueryItem:
     year_high: int
     min_cite: int
     ignore_bibtex: bool
+    ignore_abstract: bool
 
     # def __init__(self, name, pages, year_low=None, year_high=None, min_cite=None, ignore_bibtex=False):
     #     self.name = name

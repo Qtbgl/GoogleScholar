@@ -62,7 +62,9 @@ class ScrapePub1:
                 return
 
         # 创建任务
-        tasks = [asyncio.create_task(self.fill_pub.fill_abstract(pub))]
+        tasks = []
+        if not item.ignore_abstract:
+            tasks.append(asyncio.create_task(self.fill_pub.fill_abstract(pub)))
         if not item.ignore_bibtex:
             tasks.append(asyncio.create_task(self.fill_pub.fill_bibtex(pub)))
 
