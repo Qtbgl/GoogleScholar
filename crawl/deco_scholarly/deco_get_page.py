@@ -16,14 +16,16 @@ def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
         scraped_data = spider.scrape_url(url)
         item = scraped_data[0]
     except Exception as e:
-        raise Exception(f'spider-cloud爬取出错 {url}, 接口代码出错 {e}, 请检查一下积分余量！') from e
+        raise Exception(f'spider接口调用抛出异常 {e} {url}') from e
 
-    # spider-cloud访问不出错，但爬取目标网页也会error
+    # 如果spider-cloud访问不出错，但爬取任务失败
     if item['error']:
-        raise Exception(f"spider-cloud自身访问出错 {item['error']}")
-    elif not (200 <= item['status'] < 300):
-        # 此时item.error为空，但目标网页的爬取有误..'
-        raise Exception(f"spider-cloud爬取页面失败, status: {item['status']}, url: {item['url']}")
+        raise Exception(f"spider接口访问结果error {item['error']} {url}")
+
+    # 如果item.error为空，但目标网页的爬取有误..
+    has_captcha = self._requests_has_captcha(item['content'])
+    if not (200 <= item['status'] < 300) or has_captcha:
+        raise Exception(f"spider接口爬取{item['status']} has_captcha为{has_captcha} {url}")
 
     # print(item['url'], item['status'], item['costs'])
     return item['content']
