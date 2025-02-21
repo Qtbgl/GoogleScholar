@@ -6,9 +6,10 @@ GoogleScholar下创建data目录，
 
 设置 app_key = '<API_KEY>'
 
-设置 scholarly_use_proxy = True
+设置 scholarly_DIY_choose 来修改/配置/默认 scholarly  
 
-设置scholarly_alter_code = True
+> 选择: None, use_proxy, con_spider, por_mirror 
+
 
 scholarly推荐从github中下载，避免更新停留在2023年
 ```shell

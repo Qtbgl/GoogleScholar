@@ -2,7 +2,7 @@ import asyncio
 
 from bs4 import BeautifulSoup
 
-from crawl.deco_scholarly import scholarly, get_scholarly_nav
+from crawl import scholarly, get_scholarly_nav
 from run.pipline1 import QueryItem
 
 
