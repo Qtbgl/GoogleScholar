@@ -57,13 +57,12 @@ async def run_task(websocket, config):
             await websocket.send_json({'type': 'Heartbeat', 'progress': runner.get_progress()})
             await asyncio.sleep(5)
 
-        # task因为异常而结束时
-        if task.exception():
-            await websocket.send_json(
-                {'type': 'Result', 'error': str(task.exception()), 'data': runner.deliver_pubs()})
-        else:
-            await websocket.send_json(
-                {'type': 'Result', 'error': None, 'data': runner.deliver_pubs()})
+        # task异常结束，或自然结束，统一发生结果
+        await websocket.send_json({
+            'type': 'Result',
+            'error': str(task.exception()) if task.exception() else None,
+            'data': runner.deliver_pubs()
+        })
 
         await websocket.close()
     finally:

@@ -30,10 +30,7 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
         tasks = list(map(asyncio.create_task, tasks))  # debug map只会遍历一次
         try:
             logger.debug(f'开始所有（生产者，消费者）任务数 {len(tasks)} 个')  # debugging 初始即结束问题
-            await asyncio.gather(*tasks)
-        except QueryScholarlyError as e:
-            logger.error(f'scholarly执行异常 {traceback.format_exc()}')
-            raise e
+            error_pot = await self.allow_some_error(tasks)
         except Exception as e:
             logger.error(f'未知异常 {traceback.format_exc()}')
             raise Exception(f'发生异常，中断爬取 {e}')
@@ -45,6 +42,22 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
             await asyncio.gather(*tasks, return_exceptions=True)
             logger.debug(f'所有任务（生产者，消费者等）已结束')
         # 不返回结果
+        # 抛出一下被允许的异常
+        if len(error_pot):
+            raise Exception('; '.join([f'{type(err)}: {err}' for err in error_pot]))
+
+    async def allow_some_error(self, tasks):
+        logger = self.config.logger
+        error_pot = []
+        completed = False
+        while not completed:
+            try:
+                await asyncio.gather(*tasks)  # 允许发生某些错误，但继续等待完成
+                completed = True
+            except QueryScholarlyError as e:
+                logger.error(f'scholarly执行异常 {traceback.format_exc()}')
+                error_pot.append(e)
+        return error_pot
 
     def get_progress(self):
         if not self.result.pages:

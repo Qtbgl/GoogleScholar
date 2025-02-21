@@ -24,6 +24,7 @@ if api_config.scholarly_DIY_choose == 'con_spider':
 elif api_config.scholarly_DIY_choose == 'por_mirror':
     import crawl.scholarly_por_mirror.deco_get_soup
     import crawl.scholarly_por_mirror.deco_get_bibtex
+    scholarly.set_retries(2)  # 防止非异步进程太久不结束
 
 # 其他相关的工具方法
 from crawl.scholarly_tool import get_scholarly_nav, use_proxy
