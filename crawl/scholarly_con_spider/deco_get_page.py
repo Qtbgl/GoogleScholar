@@ -13,7 +13,8 @@ def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
 
     url = pagerequest
     try:
-        scraped_data = spider.scrape_url(url)
+        params = {'proxy_enabled': True, "store_data": False, 'metadata': False, 'request': 'http'}
+        scraped_data = spider.scrape_url(url, params)  # 参数专用于爬谷歌学术
         item = scraped_data[0]
     except Exception as e:
         raise Exception(f'spider接口调用抛出异常 {e} {url}') from e

@@ -48,7 +48,8 @@ class FillPub1:
         spider = self.config.spider
 
         for i in range(max_tries):
-            async for data in spider.scrape_url(url):
+            params = {'proxy_enabled': True, "store_data": False, 'metadata': False, 'request': 'smart'}
+            async for data in spider.scrape_url(url, params):
                 if isinstance(data, list) and len(data):
                     item = data[0]
                     if item['error']:  # 具体区分spider的错误
