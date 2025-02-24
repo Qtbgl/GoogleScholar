@@ -4,6 +4,7 @@ import traceback
 from spider import AsyncSpider
 from urllib.parse import urlparse
 
+from crawl.By_elsevier_api import get_abstract_by_pii
 from crawl.by_scholarly import fill_bibtex
 from llm.AskGpt import AskGpt
 from llm.process_html_for_gpt import process_html
@@ -77,7 +78,11 @@ class FillPub1:
         if 'pdf' in ps.path.lower():
             raise QuitAbstract('网页是pdf请直接下载')
         if 'sciencedirect.com' in ps.netloc:
-            raise QuitAbstract('sciencedirect网站反爬')
+            try:
+                pub['abstract'] = await get_abstract_by_pii(ps)
+                return  # 暂时简单地分流
+            except Exception as e:
+                raise QuitAbstract(f'sciencedirect用api获取失败 {e}')
         if 'ieee.org' in ps.netloc:
             raise QuitAbstract('ieee网站需要浏览器上加载')
 
