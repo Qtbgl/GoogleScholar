@@ -58,7 +58,7 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
                 await asyncio.gather(*tasks)  # 允许发生某些错误，但继续等待完成
                 completed = True
             except QueryScholarlyError as e:
-                logger.error(f'scholarly执行异常 {traceback.format_exc()}')
+                logger.error(f'Runner接收到异常: {traceback.format_exc()}')
                 error_pot.append(e)
             if not completed:
                 tasks = [ts for ts in tasks if not ts.done()]  # debug
