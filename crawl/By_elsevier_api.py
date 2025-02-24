@@ -7,10 +7,10 @@ from data import api_config
 async def get_abstract_by_pii(url_parse: ParseResult):
     # 先获取论文标识符PII
     pii = None
-    pths = url_parse.path.strip('/')
+    pths = url_parse.path.split('/')
     for i, s in enumerate(pths):
         if s == 'pii':
-            pii = pths[i]
+            pii = pths[i+1]
     if pii is None:
         raise Exception(f'url中缺少pii {url_parse.geturl()}')
 
