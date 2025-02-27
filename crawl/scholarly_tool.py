@@ -51,3 +51,6 @@ def get_scholarly_nav():
 #
 #     def __exit__(self, exc_type, exc_val, exc_tb):
 #         self._users -= 1
+
+class QueryScholarlyError(Exception):
+    pass

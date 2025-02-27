@@ -3,6 +3,7 @@ import asyncio
 from bs4 import BeautifulSoup
 
 from crawl import scholarly, get_scholarly_nav
+from crawl.scholarly_tool import QueryScholarlyError
 from run.pipline1 import QueryItem
 
 
@@ -49,10 +50,6 @@ async def query_scholar(item: QueryItem):
                 break
 
     # 结束生成器
-
-
-class QueryScholarlyError(Exception):
-    pass
 
 
 class SearchPubsAsync:
