@@ -31,16 +31,11 @@ class FillPub1:
         task_id = pub['task_id']
         logger.debug(f'进入摘要任务 #{task_id}')
         try:
-            try:
-                await self._fill_abstract(pub)
-                logger.debug(f'摘要任务成功 #{task_id}')
-            except QuitAbstract as e:
-                logger.error(f'摘要任务失败 {e} #{task_id}')
-                try:
-                    await self.get_abstract_by_semanticscholar(pub)
-                except QuitAbstract as e:
-                    logger.error(f'摘要任务失败 {e} #{task_id}')
-                    self.writer.mark_error(pub, f'爬取摘要失败: {e}')
+            await self._fill_abstract(pub)
+            logger.debug(f'摘要任务成功 #{task_id}')
+        except QuitAbstract as e:
+            logger.error(f'摘要任务失败 {e} #{task_id}')
+            self.writer.mark_error(pub, f'爬取摘要失败: {e}')
             # 吸收此类型异常
         except asyncio.CancelledError:
             logger.debug(f'取消摘要任务 #{task_id}')
