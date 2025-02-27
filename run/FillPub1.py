@@ -1,6 +1,7 @@
 import asyncio
 import traceback
 
+import httpx
 from spider import AsyncSpider
 from urllib.parse import urlparse
 
@@ -124,10 +125,14 @@ class FillPub1:
         logger = self.config.logger
         logger.debug(f'尝试再用semanticscholar搜索标题 {title}')
         try:
-            from semanticscholar import SemanticScholar
-            sch = SemanticScholar()
-            paper = await asyncio.to_thread(sch.search_paper, {'query': title})
-            pub['abstract'] = paper['abstract']
+            app_key = api_config.app_key
+            url = f"http://localhost:8000/semanticscholar/search_paper/{title}?app_key={app_key}"
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                response.raise_for_status()  # 检查请求是否成功
+                result = response.json()
+                assert result.get('error') is None, result.get('error')
+                pub['abstract'] = result['abstract']
         except Exception as e:
             raise QuitAbstract(f'semanticscholar搜索异常 {e}')
 
