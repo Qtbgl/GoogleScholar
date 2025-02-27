@@ -1,5 +1,5 @@
 from app import *
-
+from data import api_config
 
 @app.get("/")
 def read_root():
@@ -9,4 +9,4 @@ def read_root():
 if __name__ == '__main__':
     # uvicorn 内嵌式启动
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8134)
+    uvicorn.run(app, host='0.0.0.0', port=api_config.app_port)

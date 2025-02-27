@@ -126,7 +126,8 @@ class FillPub1:
         logger.debug(f'尝试再用semanticscholar搜索标题 {title}')
         try:
             app_key = api_config.app_key
-            url = f"http://localhost:8000/semanticscholar/search_paper/{title}?app_key={app_key}"
+            port = api_config.app_port
+            url = f"http://localhost:{port}/semanticscholar/search_paper/{title}?app_key={app_key}"
             async with httpx.AsyncClient() as client:
                 response = await client.get(url)
                 response.raise_for_status()  # 检查请求是否成功
