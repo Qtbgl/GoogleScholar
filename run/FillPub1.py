@@ -30,11 +30,16 @@ class FillPub1:
         task_id = pub['task_id']
         logger.debug(f'进入摘要任务 #{task_id}')
         try:
-            await self._fill_abstract(pub)
-            logger.debug(f'摘要任务成功 #{task_id}')
-        except QuitAbstract as e:
-            logger.error(f'摘要任务失败 {e} #{task_id}')
-            self.writer.mark_error(pub, f'爬取摘要失败: {e}')
+            try:
+                await self._fill_abstract(pub)
+                logger.debug(f'摘要任务成功 #{task_id}')
+            except QuitAbstract as e:
+                logger.error(f'摘要任务失败 {e} #{task_id}')
+                try:
+                    await self.get_abstract_by_semanticscholar(pub)
+                except QuitAbstract as e:
+                    logger.error(f'摘要任务失败 {e} #{task_id}')
+                    self.writer.mark_error(pub, f'爬取摘要失败: {e}')
             # 吸收此类型异常
         except asyncio.CancelledError:
             logger.debug(f'取消摘要任务 #{task_id}')
@@ -113,6 +118,18 @@ class FillPub1:
             pub['abstract'] = await gpt.ask_gpt(query_txt)
         except (AskGpt.GPTQueryError, AskGpt.GPTAnswerError) as e:
             raise QuitAbstract(e)
+
+    async def get_abstract_by_semanticscholar(self, pub):
+        title = pub['title']
+        logger = self.config.logger
+        logger.debug(f'尝试再用semanticscholar搜索标题 {title}')
+        try:
+            from semanticscholar import SemanticScholar
+            sch = SemanticScholar()
+            paper = await asyncio.to_thread(sch.search_paper, {'query': title})
+            pub['abstract'] = paper['abstract']
+        except Exception as e:
+            raise QuitAbstract(f'semanticscholar搜索异常 {e}')
 
     async def fill_bibtex(self, pub):
         """

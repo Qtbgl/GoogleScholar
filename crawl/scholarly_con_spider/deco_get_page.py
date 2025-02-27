@@ -31,7 +31,7 @@ def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
 
     url = pagerequest
 
-    max_tries = 3
+    max_tries = api_config.spider_get_scholar_page_max_tries
     for tries in range(max_tries):
         # spider方面的
         content, status = spider_access_google_scholar(url)
@@ -39,6 +39,7 @@ def _new_get_page(self, pagerequest: str, premium: bool = False) -> str:
         has_captcha = self._requests_has_captcha(content)
         if 200 <= status < 300 and not has_captcha:
             return content
+        print('debug', f"spider接口爬取{status} has_captcha为{has_captcha} {url}")
 
         if tries == max_tries - 1:
             raise MaxTriesExceededException(f"spider接口爬取{status} has_captcha为{has_captcha} {url}")
