@@ -110,17 +110,19 @@ class Runner1(ReadCrawlProgress, LoggingPubCrawl):
             else:
                 bib_link = pub.get('BibTeX', empty_bib).get('link')
                 bib_raw = pub.get('BibTeX', empty_bib).get('string')
-                # bib加入摘要
-                if bib_raw and abstract:
-                    bib_str = add_abstract(bib_raw, abstract)
-                elif bib_raw and not abstract:
-                    bib_str = del_abstract(bib_raw)
-                else:
-                    bib_str = None
+                # # bib加入摘要
+                # if bib_raw and abstract:
+                #     bib_str = add_abstract(bib_raw, abstract)
+                # elif bib_raw and not abstract:
+                #     bib_str = del_abstract(bib_raw)
+                # else:
+                #     bib_str = None
 
                 obj['bib_link'] = bib_link
                 obj['bib_raw'] = bib_raw
-                obj['bib'] = bib_str
+
+                # bib合成功能移到客户端上
+                # obj['bib'] = bib_str
 
             obj['error'] = '; '.join(pub['error']) if len(pub['error']) else None
             results.append(obj)
