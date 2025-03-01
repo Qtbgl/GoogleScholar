@@ -11,7 +11,8 @@ def nav_get_page(self, pagerequest: str, premium: bool = False) -> str:
     url = pagerequest
 
     # spider方面的
-    content = spider_scrape_url(url)
+    params = {'proxy_enabled': True, "store_data": False, 'metadata': False, 'request': 'http'}
+    content = spider_scrape_url(url, params)
     has_captcha = self._requests_has_captcha(content)
     if has_captcha:
         raise SpiderCrawlFailed(f"spider爬取结果has_captcha {url}")
