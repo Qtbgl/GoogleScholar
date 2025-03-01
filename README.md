@@ -17,3 +17,12 @@ git clone -b develop https://github.com/scholarly-python-package/scholarly.git
 cd .\scholarly
 pip install .
 ```
+
+
+### 单机版本
+
+离线运行/不需要在服务器上
+
+所有网页通过spider来爬取
+
+抽取出了爬取bib和摘要的代码
