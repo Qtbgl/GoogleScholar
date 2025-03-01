@@ -8,7 +8,7 @@ from pub_item import PubItem
 logger = logging.getLogger('CrawlGoogleScholar')
 
 
-async def fill(pub: PubItem, min_cite):
+async def fill(pub: PubItem, min_cite=None):
     num_citations = pub.num_citations
     # 过滤引用数量
     if min_cite is not None and min_cite > 0:
