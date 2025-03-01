@@ -2,7 +2,7 @@ class PubItem(object):
     def __init__(self, raw_pub, task_id):
         self.raw_pub = raw_pub
         self.task_id = task_id
-        self.cancel_reason = None
+        self.thrown_reason = None
         self.abstract = None
         self.bibtex = None
 
@@ -16,16 +16,19 @@ class PubItem(object):
     
     @property
     def cut(self):
-        return self.raw_pub.get('bib', {}).get('abstract'),
+        return self.raw_pub.get('bib', {}).get('abstract')
 
-    def cancel_its_fill(self, reason):  # 取消级别的才记录此项，不是忽略级别
-        self.cancel_reason = reason
+    def thrown(self, reason):  # 取消级别的才记录此项，不是忽略级别
+        """
+        标记成不想要这篇文章了
+        """
+        self.thrown_reason = reason
 
     def fill_abstract(self, abstract):
-        assert self.cancel_reason is None
+        # assert self.thrown_reason is None
         self.abstract = abstract
 
     def fill_bibtex(self, bibtex):
-        assert self.cancel_reason is None
+        # assert self.thrown_reason is None
         self.bibtex = bibtex
 

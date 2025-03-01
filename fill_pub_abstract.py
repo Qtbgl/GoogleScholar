@@ -22,11 +22,12 @@ async def fill_abstract(pub: PubItem):
     task_id = pub.task_id
     logger.debug(f'进入摘要任务 #{task_id}')
     try:
-        await fill_abstract(pub)
+        await _fill_abstract(pub)
         logger.debug(f'摘要任务成功 #{task_id}')
     except QuitAbstract as e:
         logger.error(f'摘要任务失败 {e} #{task_id}')
-        # （忽略级别）吸收此类型异常
+        # 吸收此类型异常
+        # 爬取失败 ！= 抛弃这篇
     except asyncio.CancelledError:
         logger.debug(f'取消摘要任务 #{task_id}')
         raise
@@ -68,6 +69,7 @@ async def _fill_abstract(pub: PubItem):
     except SpiderCrawlFailed as e:
         raise QuitAbstract(e)
 
+    # TODO: 检查这篇文章是否retrack即被撤稿
     try:
         html_str = content
         gpt = AskGpt(timeout=60)
