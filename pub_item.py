@@ -13,10 +13,18 @@ class PubItem(object):
     @property
     def num_citations(self):
         return self.raw_pub.get('num_citations', 0)
-    
+
+    @property
+    def eprint_url(self):
+        return self.raw_pub.get('eprint_url')
+
     @property
     def cut(self):
         return self.raw_pub.get('bib', {}).get('abstract')
+
+    @property
+    def basic_info(self):
+        return self.raw_pub.get('bib')
 
     def thrown(self, reason):  # fill_pub取消级别的才记录此项，不是忽略级别
         """

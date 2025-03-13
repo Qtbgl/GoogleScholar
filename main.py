@@ -11,7 +11,8 @@ async def main():
     # 结果过滤
     filter_params = {'min_cite': None, }
 
-    await Query().main(key_word=key_word, pages=pages, search_params=search_params, filter_params=filter_params)
+    await Query(save_dir='log/Output').main(
+        key_word=key_word, pages=pages, search_params=search_params, filter_params=filter_params)
 
 
 if __name__ == '__main__':

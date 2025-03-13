@@ -25,7 +25,7 @@ async def query(key_word: str, pages: int, search_params=None, filter_params=Non
                     raise Exception('min_cite 应该为空或一个整数')
 
     pubs = []
-    logger.debug(f'开始搜索文献: {key_word}')
+    logger.debug(f'开始搜索文献: {key_word}')  # 直接搜索，不用异步
     try:
         for raw_pub in scholarly.search_pubs(key_word, **(search_params or {})):
             task_id = len(pubs)
