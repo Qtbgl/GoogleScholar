@@ -2,7 +2,7 @@ from urllib.parse import ParseResult
 
 import aiohttp
 
-from config import elsevier_config
+from config import elsevier_cfg
 
 
 async def get_abstract_by_pii(url_parse: ParseResult):
@@ -18,7 +18,7 @@ async def get_abstract_by_pii(url_parse: ParseResult):
     base_url = "https://api.elsevier.com/content/article/pii/"
     url = f"{base_url}{pii}?view=META_ABS"  # META_ABS: 返回元数据和摘要
     headers = {
-        "X-ELS-APIKey": elsevier_config.api_key,
+        "X-ELS-APIKey": elsevier_cfg.api_key,
         "Accept": "application/json",
     }
 

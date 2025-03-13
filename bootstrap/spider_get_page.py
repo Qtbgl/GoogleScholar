@@ -1,11 +1,11 @@
 from spider import Spider, AsyncSpider
-from config import spider_config
+from config import spider_cfg
 
 
 async def async_scrape_url(url, params):
-    app = AsyncSpider(api_key=spider_config.api_key)
+    app = AsyncSpider(api_key=spider_cfg.api_key)
     try:
-        async with app:
+        async with app:  # 即用即创建session
             async for data in app.scrape_url(url, params):
                 assert isinstance(data, list) and len(data), f'crawl结果异常 {data}'
                 item = data[0]
@@ -18,7 +18,7 @@ async def async_scrape_url(url, params):
 
 def spider_scrape_url(url, params):
     try:
-        spider = Spider(api_key=spider_config.api_key)
+        spider = Spider(api_key=spider_cfg.api_key)
         data = spider.scrape_url(url, params)  # 参数专用于爬谷歌学术
         assert isinstance(data, list) and len(data), f'crawl结果异常 {data}'
         item = data[0]
@@ -35,7 +35,7 @@ def check_scrape_result(item):
         raise SpiderAccessError(f"spider接口访问结果error {item['error']} {item['url']}")
 
     # 如果item.error为空，但目标网页的爬取有误..
-    if 200 <= item['status'] < 300:
+    if not (200 <= item['status'] < 300):
         raise SpiderCrawlFailed(f"spider接口爬取{item['status']} {item['url']}")
 
 

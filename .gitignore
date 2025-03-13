@@ -5,3 +5,5 @@
 .idea/
 data/
 test_code/
+
+config/*.txt

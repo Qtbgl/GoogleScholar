@@ -27,16 +27,20 @@ async def query(key_word: str, pages: int, search_params=None, filter_params=Non
 
     pubs = []
     logger.debug(f'开始搜索文献: {key_word}')
-    for raw_pub in scholarly.search_pubs(key_word, **(search_params or {})):
-        task_id = len(pubs)
-        pub = PubItem(raw_pub, task_id)
-        logger.debug(f'\t #{task_id} {pub.pub_url}')
-        # 加入列表
-        pubs.append(pub)
-        # 结果传递
-        yield pub
-        if len(pubs) >= pages * 10:  # 每页10篇
-            break
+    try:
+        for raw_pub in scholarly.search_pubs(key_word, **(search_params or {})):
+            task_id = len(pubs)
+            pub = PubItem(raw_pub, task_id)
+            logger.debug(f'\t #{task_id} {pub.pub_url}')
+            # 加入列表
+            pubs.append(pub)
+            # 结果传递
+            yield pub
+            if len(pubs) >= pages * 10:  # 每页10篇
+                break
+    except Exception as e:
+        logger.error(f'未知异常 {traceback.format_exc()}')
+        raise Exception(f'发生异常，中断爬取 {e}')
 
     tasks = [fill(pub, **filter_params) for pub in pubs]
     tasks = list(map(asyncio.create_task, tasks))

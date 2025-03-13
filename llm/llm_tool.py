@@ -1,9 +1,9 @@
 # openai == 0.27.6
 import openai
-from config import openai_config
+from config import openai_cfg
 
-openai.api_base = openai_config.openai_api_base
-openai.api_key = openai_config.openai_api_key
+openai.api_base = openai_cfg.openai_api_base
+openai.api_key = openai_cfg.openai_api_key
 
 
 async def ask_gpt_async(query, timeout):
