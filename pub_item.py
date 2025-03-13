@@ -18,11 +18,15 @@ class PubItem(object):
     def cut(self):
         return self.raw_pub.get('bib', {}).get('abstract')
 
-    def thrown(self, reason):  # 取消级别的才记录此项，不是忽略级别
+    def thrown(self, reason):  # fill_pub取消级别的才记录此项，不是忽略级别
         """
         标记成不想要这篇文章了
         """
         self.thrown_reason = reason
+
+    @property
+    def is_thrown(self):
+        return self.thrown_reason is not None
 
     def fill_abstract(self, abstract):
         # assert self.thrown_reason is None

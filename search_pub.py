@@ -13,17 +13,16 @@ logger = logging.getLogger('CrawlGoogleScholar')
 async def query(key_word: str, pages: int, search_params=None, filter_params=None):
     # 检查输入合规性
     if not key_word.strip():
-        raise Exception(f'key_word 输入不能为空 {key_word}')
-    if not isinstance(pages, int) or pages < 1:
-        raise Exception(f'pages 必须大于零 {pages}')
+        raise Exception('key_word 输入不能为空')
 
-    filter_params = filter_params or {}
+    if not isinstance(pages, int) or pages < 1:
+        raise Exception('pages 必须大于零')
+
     if filter_params:
         for key, value in filter_params.items():
             if key == 'min_cite':
-                assert value is None or isinstance(value, int), f'min_cite 应该为空或一个数量 {value}'
-            else:
-                raise Exception(f'不支持此过滤条件: {key}={value}')
+                if value is not None and not isinstance(value, int):
+                    raise Exception('min_cite 应该为空或一个整数')
 
     pubs = []
     logger.debug(f'开始搜索文献: {key_word}')
@@ -42,7 +41,7 @@ async def query(key_word: str, pages: int, search_params=None, filter_params=Non
         logger.error(f'未知异常 {traceback.format_exc()}')
         raise Exception(f'发生异常，中断爬取 {e}')
 
-    tasks = [fill(pub, **filter_params) for pub in pubs]
+    tasks = [fill(pub, **(filter_params or {})) for pub in pubs]
     tasks = list(map(asyncio.create_task, tasks))
     try:
         logger.debug(f'开始所有任务 {len(tasks)} 个')

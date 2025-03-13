@@ -13,7 +13,7 @@ async def fill(pub: PubItem, min_cite=None):
     # 过滤引用数量
     if min_cite is not None and min_cite > 0:
         if num_citations < min_cite:
-            pub.thrown('引用数量过滤')
+            pub.thrown('引用数量过滤')   # TODO: 以后加上论文被撤回过滤
             return
 
     # 创建任务

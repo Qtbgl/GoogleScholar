@@ -55,4 +55,4 @@ async def _until_get_bib(raw_pub):
             bib_str = await asyncio.to_thread(scholarly.bibtex, raw_pub)
             return bib_str
         except SpiderCrawlFailed as e:
-            logger.error(f'bibtex爬取失败 {e}, 将再次尝试')
+            logger.debug(f'bibtex本次爬取失败，将再次尝试 {e}')  # 日志等级不用error
