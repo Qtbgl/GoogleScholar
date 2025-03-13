@@ -38,6 +38,7 @@ class Query:
             self.save_bibs()
 
     def make_path(self, filename):
+        os.makedirs(self.save_dir, exist_ok=True)
         return os.path.join(self.save_dir, filename)
 
     def save_data(self, log_file, kwargs):
@@ -80,4 +81,4 @@ class Query:
         with open(self.make_path('data.bib'), 'w') as f:
             f.write(other_bib)
 
-        print(f'正在保存 {len(entries)} 篇文章的bib')
+        print(f'已保存 {len(entries)} 篇文章的bib')

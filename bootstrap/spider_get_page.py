@@ -16,10 +16,16 @@ async def async_scrape_url(url, params):
     return item['content']
 
 
+last_data = None
+
+
 def spider_scrape_url(url, params):
     try:
         spider = Spider(api_key=spider_cfg.api_key)
         data = spider.scrape_url(url, params)  # 参数专用于爬谷歌学术
+        global last_data  # 保存现场，用于debug
+        last_data = data
+
         assert isinstance(data, list) and len(data), f'crawl结果异常 {data}'
         item = data[0]
     except Exception as e:

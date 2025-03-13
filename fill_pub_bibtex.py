@@ -30,6 +30,8 @@ async def fill_bibtex(pub: PubItem):
         raise
     except Exception as e:
         logger.error(f'bibtex获取失败 {type(e)} {e} #{task_id}')
+        from bootstrap import spider_get_page
+        logger.debug(f'spider_get_page上一次爬取结果 {spider_get_page.last_data}')
         raise
 
 

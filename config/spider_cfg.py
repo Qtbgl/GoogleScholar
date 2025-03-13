@@ -3,4 +3,4 @@ with open(__file__.replace('.py', '.txt'), 'r') as _f:
     if not api_key:
         api_key = input('请输入spider的api_key:')
 
-search_max_tries = 2  # search_load_url函数中
+search_max_tries = 5  # search_load_url函数中

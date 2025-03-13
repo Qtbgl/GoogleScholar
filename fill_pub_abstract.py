@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 from bootstrap import elsevier_api
 from bootstrap.spider_get_page import async_scrape_url, SpiderCrawlFailed
+from bootstrap.crawl_semanticscholar import get_abstract_by_semanticscholar
 from llm.AskGpt import AskGpt
 from llm.process_html_for_gpt import process_html
 from pub_item import PubItem
@@ -41,6 +42,14 @@ async def _fill_abstract(pub: PubItem):
     等待时间: spider未知
     GPT询问时间: 不超过60s
     """
+    # 先用semanticscholar爬取试一试
+    try:
+        abstract = await get_abstract_by_semanticscholar(pub.basic_info['title'])
+        pub.fill_abstract(abstract)
+        return
+    except Exception as e:
+        logger.debug(f'semanticscholar爬取api失败 {e}')
+
     page_url = pub.pub_url
     if not page_url:
         raise QuitAbstract('缺少网页地址')

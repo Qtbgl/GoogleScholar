@@ -2,7 +2,7 @@ import asyncio
 import logging
 import traceback
 
-from scholarly import scholarly
+from scholarly import scholarly, MaxTriesExceededException
 
 from fill_pub import fill
 from pub_item import PubItem
@@ -37,9 +37,11 @@ async def query(key_word: str, pages: int, search_params=None, filter_params=Non
             yield pub
             if len(pubs) >= pages * 10:  # 每页10篇
                 break
+    except MaxTriesExceededException as e:
+        raise
     except Exception as e:
         logger.error(f'未知异常 {traceback.format_exc()}')
-        raise Exception(f'发生异常，中断爬取 {e}')
+        raise
 
     tasks = [fill(pub, **(filter_params or {})) for pub in pubs]
     tasks = list(map(asyncio.create_task, tasks))
@@ -48,7 +50,7 @@ async def query(key_word: str, pages: int, search_params=None, filter_params=Non
         await asyncio.gather(*tasks)
     except Exception as e:
         logger.error(f'未知异常 {traceback.format_exc()}')
-        raise Exception(f'发生异常，中断爬取 {e}')
+        raise
     finally:
         # 取消未完成的任务
         for task in tasks:
