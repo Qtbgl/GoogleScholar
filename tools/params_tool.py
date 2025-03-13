@@ -1,15 +1,3 @@
-def is_key(api_key):
-    from data import api_config
-    return api_key == api_config.app_key
-
-
-def check_key(obj: dict):
-    assert 'api_key' in obj, 'API key missing'
-    api_key = obj['api_key']
-    assert is_key(api_key), 'Invalid API key!'
-    return api_key
-
-
 # def get_general_params(obj: dict):
 #     res = {}
 #     # 必需参数
@@ -81,16 +69,3 @@ def get_bool(obj, key, default=False):
         return default
     assert type(val) is bool, 'Value must be bool, not {}'.format(type(val))
     return val
-
-
-class ParamError(Exception):
-    pass
-
-
-def param_check(func):
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            raise ParamError(e)
-    return wrapper
