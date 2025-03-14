@@ -25,4 +25,4 @@ def search_load_url(self, url: str):
 # 使用反射修改类的方法
 
 setattr(_SearchScholarIterator, '_load_url', search_load_url)
-print('scholarly已修改', __search_load_url, __file__)
+print(f'已修改scholarly的类方法 {__search_load_url} 在文件 {__file__}')

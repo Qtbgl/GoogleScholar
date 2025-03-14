@@ -25,4 +25,4 @@ def nav_get_page(self, pagerequest: str, premium: bool = False) -> str:
 # 使用反射修改类的方法
 
 setattr(Navigator, '_get_page', nav_get_page)
-print('scholarly已修改', __nav_get_page, __file__)
+print(f'已修改scholarly的类方法 {__nav_get_page} 在文件 {__file__}')
