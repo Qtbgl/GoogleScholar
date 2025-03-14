@@ -18,12 +18,17 @@ class Query:
     def __init__(self, save_dir=''):
         self.data = []
         self.save_dir = save_dir
+        self.start_time = datetime.now()
+        # 创建日志文件名，在每一次Query实例上==一次查询任务
+        log_file = os.path.join('data/log', f"{self.start_time.strftime('%Y-%m-%d-%H%M%S')}.log")
+        setup_file_loging('CrawlGoogleScholar', log_file)
+        self.log_file = log_file
+
+    @property
+    def datetime_short(self):
+        return self.start_time.strftime("%h_%d_%H%M%S")
 
     async def main(self, **kwargs):
-        # 创建日志文件名，在每一次任务上
-        log_file = os.path.join('data/log', f"{datetime.now().strftime('%Y-%m-%d-%H%M%S')}.log")
-        setup_file_loging('CrawlGoogleScholar', log_file)
-
         # 进入实际的query
         try:
             async for pub in query(**kwargs):
@@ -33,20 +38,20 @@ class Query:
 
         print(f'已获得 {len(self.data)} 篇论文')
         if len(self.data):
-            self.save_data(log_file, kwargs)
+            self.save_data(kwargs)
             self.save_bibs()
 
     def make_path(self, filename):
         os.makedirs(self.save_dir, exist_ok=True)
         return os.path.join(self.save_dir, filename)
 
-    def save_data(self, log_file, kwargs):
+    def save_data(self, kwargs):
         record = {
-            'log_file': log_file,
+            'log_file': self.log_file,
             'kwargs': kwargs,
             'data': [vars(pub) for pub in self.data]
         }
-        with open(self.make_path('data.pkl'), 'wb') as f:
+        with open(self.make_path(f'{self.datetime_short}.data.pkl'), 'wb') as f:
             pickle.dump(record, f)
 
         print(f'已保存 {len(self.data)} 篇文章的结果')
@@ -73,11 +78,15 @@ class Query:
 
         arxiv_bib, other_bib = split_arxiv(entries)
         # 将arXiv条目写入.bib文件
-        with open(self.make_path('data.arXiv.bib'), 'w') as f:
+        with open(self.make_path(f'{self.datetime_short}.arXiv.bib'), 'w') as f:
             f.write(arxiv_bib)
 
         # 将其他条目写入.bib文件
-        with open(self.make_path('data.bib'), 'w') as f:
+        with open(self.make_path(f'{self.datetime_short}.bib'), 'w') as f:
             f.write(other_bib)
 
         print(f'已保存 {len(entries)} 篇文章的bib')
+
+    def clean_data(self):
+        print(f'将清空 {len(self.data)} 篇论文的数据')
+        self.data = []
