@@ -7,7 +7,7 @@ from bootstrap.spider_get_page import async_scrape_url, SpiderCrawlFailed
 from bootstrap.crawl_semanticscholar import get_abstract_by_semanticscholar
 from llm.AskGpt import AskGpt
 from llm.process_html_for_gpt import process_html
-from pub_item import PubItem
+from crawl.pub_item import PubItem
 
 logger = logging.getLogger('CrawlGoogleScholar')
 

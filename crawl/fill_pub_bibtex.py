@@ -4,7 +4,7 @@ import logging
 from scholarly import scholarly
 
 from bootstrap.spider_get_page import SpiderCrawlFailed
-from pub_item import PubItem
+from crawl.pub_item import PubItem
 
 logger = logging.getLogger('CrawlGoogleScholar')
 

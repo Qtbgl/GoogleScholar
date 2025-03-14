@@ -4,8 +4,8 @@ import traceback
 
 from scholarly import scholarly, MaxTriesExceededException
 
-from fill_pub import fill
-from pub_item import PubItem
+from crawl.fill_pub import fill
+from crawl.pub_item import PubItem
 
 logger = logging.getLogger('CrawlGoogleScholar')
 
