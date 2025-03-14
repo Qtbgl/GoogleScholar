@@ -38,11 +38,11 @@ def spider_scrape_url(url, params):
 def check_scrape_result(item):
     # 如果spider-cloud访问不出错，但爬取任务失败
     if item['error']:
-        raise SpiderAccessError(f"spider接口访问结果error {item['error']} {item['url']}")
+        raise SpiderAccessError(f"spider接口访问结果error!=None {item}")
 
     # 如果item.error为空，但目标网页的爬取有误..
     if not (200 <= item['status'] < 300):
-        raise SpiderCrawlFailed(f"spider接口爬取{item['status']} {item['url']}")
+        raise SpiderCrawlFailed(f"spider接口爬取{item}")
 
 
 class SpiderAccessError(Exception):

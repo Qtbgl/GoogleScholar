@@ -78,11 +78,11 @@ class Query:
 
         arxiv_bib, other_bib = split_arxiv(entries)
         # 将arXiv条目写入.bib文件
-        with open(self.make_path(f'{self.datetime_short}.arXiv.bib'), 'w') as f:
+        with open(self.make_path(f'{self.datetime_short}.arXiv.bib'), 'w', encoding='utf-8') as f:
             f.write(arxiv_bib)
 
         # 将其他条目写入.bib文件
-        with open(self.make_path(f'{self.datetime_short}.bib'), 'w') as f:
+        with open(self.make_path(f'{self.datetime_short}.bib'), 'w', encoding='utf-8') as f:
             f.write(other_bib)
 
         print(f'已保存 {len(entries)} 篇文章的bib')
