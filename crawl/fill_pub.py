@@ -39,17 +39,24 @@ class IsRetracted:
         self.yes = yes
 
 
+async def throw_pub_if_is_retracted(pub: PubItem, info):
+    try:
+        result = await ask_if_pub_is_retracted(info)
+        if result.clear and result.yes:
+            pub.thrown(f'文章是retracted {result.answer}')  # pub中会被标记
+        elif not result.clear:
+            logger.error(f'GPT无法区分，默认接受文献 #{pub.task_id}')
+    except Exception as e:
+        logger.error(f'GPT访问出错，默认接受文献 {e} #{pub.task_id}')
+
+
 async def fill(pub: PubItem, min_cite=None):
+    # 在最开始fill时过滤撤回情况
     basic_info = str(pub.basic_info)
     if 'retract' in basic_info.lower():
-        try:
-            result = await ask_if_pub_is_retracted(basic_info)
-            if result.clear and result.yes:
-                pub.thrown(f'文章是retracted {result.answer}')  # 在最开始fill时加入进行过滤
-            elif not result.clear:
-                logger.error(f'GPT无法区分，默认接受文献 #{pub.task_id}')
-        except Exception as e:
-            logger.error(f'GPT访问出错，默认接受文献 {e} #{pub.task_id}')
+        await throw_pub_if_is_retracted(pub, basic_info)
+        if pub.is_thrown:
+            return
 
     num_citations = pub.num_citations
     # 过滤引用数量
@@ -74,14 +81,9 @@ async def fill(pub: PubItem, min_cite=None):
 
     more_info = str(vars(pub))
     if 'retract' in more_info.lower():
-        try:
-            result = await ask_if_pub_is_retracted(more_info)
-            if result.clear and result.yes:
-                pub.thrown(f'文章是retracted {result.answer}')  # 在fill最后时也进行过滤
-            elif not result.clear:
-                logger.error(f'GPT无法区分，默认接受文献 #{pub.task_id}')
-        except Exception as e:
-            logger.error(f'GPT访问出错，默认接受文献 {e} #{pub.task_id}')
+        await throw_pub_if_is_retracted(pub, more_info)
+        if pub.is_thrown:
+            return
 
     # # 改为逐步进行，来检查是否接受这篇，因为fill_bibtex比较消耗爬取次数和机会
     # try:

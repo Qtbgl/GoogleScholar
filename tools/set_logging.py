@@ -28,3 +28,12 @@ def setup_file_loging(name: str, log_file):
     formatter = logging.Formatter(f'%(name)s %(asctime)s %(levelname)s %(message)s', datefmt='%m-%d %H:%M:%S')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
+
+def remove_log_handler(name):
+    logger = logging.getLogger(name)
+
+    # 遍历并移除所有处理器
+    for handler in logger.handlers[:]:  # 使用切片以避免修改列表时出错
+        logger.removeHandler(handler)
+        handler.close()  # 关闭处理器以释放资源

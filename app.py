@@ -4,22 +4,21 @@ from datetime import datetime
 
 from crawl.search_pub import query
 from bootstrap import deco_scholarly
-from tools.set_logging import setup_console_logging, setup_file_loging
+from tools.set_logging import setup_console_logging, setup_file_loging, remove_log_handler
 from tools.bib_tool import split_arxiv, make_entry
 
 # 先装饰一下原本的scholarly库
 deco_scholarly()
 
-# 再设置一下日志
-setup_console_logging('CrawlGoogleScholar', level='debug')
-
 
 class Query:
-    def __init__(self, save_dir=''):
+    def __init__(self, save_dir='', console_log_level='debug'):
         self.data = []
         self.save_dir = save_dir
         self.start_time = datetime.now()
         # 创建日志文件名，在每一次Query实例上==一次查询任务
+        remove_log_handler('CrawlGoogleScholar')
+        setup_console_logging('CrawlGoogleScholar', level=console_log_level)
         log_file = os.path.join('data/log', f"{self.start_time.strftime('%Y-%m-%d-%H%M%S')}.log")
         setup_file_loging('CrawlGoogleScholar', log_file)
         self.log_file = log_file
