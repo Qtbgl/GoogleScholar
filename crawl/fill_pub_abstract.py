@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 from urllib.parse import urlparse
 
 from bootstrap import elsevier_api
@@ -43,13 +44,17 @@ async def _fill_abstract(pub: PubItem):
     GPT询问时间: 不超过60s
     """
     # 先用semanticscholar爬取试一试
+    # 如果能获取到，但判断不了是否被撤稿
     try:
         abstract = await get_abstract_by_semanticscholar(pub.basic_info['title'])
         pub.fill_abstract(abstract)
         return
-    except Exception as e:
+    except AssertionError as e:
         logger.debug(f'semanticscholar爬取api失败 {e}')
+    except Exception as e:
+        logger.debug(f'semanticscholar爬取api失败 {traceback.format_exc()}')
 
+    # 以下是不支持爬取的情况
     page_url = pub.pub_url
     if not page_url:
         raise QuitAbstract('缺少网页地址')
@@ -61,6 +66,7 @@ async def _fill_abstract(pub: PubItem):
     if 'ieee.org' in ps.netloc:
         raise QuitAbstract('ieee网站需要浏览器上加载')
 
+    # 用api获取文章摘要，但判断不了是否被撤稿
     if 'sciencedirect.com' in ps.netloc:
         try:
             abstract = await elsevier_api.get_abstract_by_pii(ps)

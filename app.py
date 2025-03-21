@@ -11,7 +11,7 @@ from tools.bib_tool import split_arxiv, make_entry
 deco_scholarly()
 
 # 再设置一下日志
-setup_console_logging('CrawlGoogleScholar', level='info')
+setup_console_logging('CrawlGoogleScholar', level='debug')
 
 
 class Query:
@@ -54,7 +54,7 @@ class Query:
         with open(self.make_path(f'{self.datetime_short}.data.pkl'), 'wb') as f:
             pickle.dump(record, f)
 
-        print(f'已保存 {len(self.data)} 篇文章的结果')
+        print(f'已序列化 {len(self.data)} 篇的爬取结果')
 
     def save_bibs(self):
         clean_pubs = []
@@ -74,7 +74,13 @@ class Query:
             bib_raw = pub.bibtex
             abstract = pub.abstract
             # bib加入摘要
-            entries.append(make_entry(bib_raw, abstract))
+            entry = make_entry(bib_raw, abstract)
+            # 更改pub_year键名
+            if 'pub_year' in entry.keys():
+                entry['year'] = entry['pub_year']
+                del entry['pub_year']
+
+            entries.append(entry)
 
         arxiv_bib, other_bib = split_arxiv(entries)
         # 将arXiv条目写入.bib文件

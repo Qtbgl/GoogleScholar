@@ -44,3 +44,6 @@ class PubItem(object):
         # assert self.thrown_reason is None
         self.bibtex = bibtex
 
+
+class ThrowThePub(Exception):
+    pass
